@@ -2,13 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { adminService, type AdminEvent, type EventUpdate } from "@/lib/admin-api";
-import { Loader2, Search, Trash2, RefreshCw, Star, Ban, ExternalLink, Pencil, X, Check } from "lucide-react";
+import { Loader2, Search, Trash2, RefreshCw, Star, ExternalLink, Pencil, X, Clock } from "lucide-react";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "2-digit", month: "short", year: "numeric",
   });
+}
+
+/**
+ * Convert a UTC ISO string → datetime-local input value in IST (YYYY-MM-DDTHH:MM).
+ * HTML datetime-local inputs have no timezone concept, so we pre-shift to IST
+ * so what the admin sees matches what's printed on the event card.
+ */
+function toISTInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const utcMs = new Date(iso).getTime();
+  const istMs = utcMs + (5 * 60 + 30) * 60 * 1000; // +05:30
+  return new Date(istMs).toISOString().slice(0, 16);   // "YYYY-MM-DDTHH:MM"
+}
+
+/**
+ * Convert a datetime-local input value (entered in IST) → ISO 8601 with +05:30.
+ * The backend Pydantic parser handles the offset and stores UTC correctly.
+ */
+function fromISTInput(val: string): string | undefined {
+  if (!val) return undefined;
+  return `${val}:00+05:30`;
 }
 
 function EditModal({ event, onClose, onSaved }: {
@@ -29,6 +50,11 @@ function EditModal({ event, onClose, onSaved }: {
     is_featured: event.is_featured,
     is_cancelled: event.is_cancelled,
   });
+
+  // Separate IST string state for the two datetime-local inputs
+  const [startIST, setStartIST] = useState(toISTInput(event.start_at));
+  const [endIST, setEndIST] = useState(toISTInput(event.end_at));
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,7 +62,12 @@ function EditModal({ event, onClose, onSaved }: {
     setSaving(true);
     setError("");
     try {
-      const updated = await adminService.updateEvent(event.id, form);
+      const payload: EventUpdate = {
+        ...form,
+        ...(startIST ? { start_at: fromISTInput(startIST) } : {}),
+        ...(endIST   ? { end_at:   fromISTInput(endIST)   } : {}),
+      };
+      const updated = await adminService.updateEvent(event.id, payload);
       onSaved(updated as unknown as AdminEvent);
       onClose();
     } catch (e: any) {
@@ -53,6 +84,36 @@ function EditModal({ event, onClose, onSaved }: {
           <h3 className="font-extrabold text-lg">Edit Event</h3>
           <button onClick={onClose}><X className="w-5 h-5" /></button>
         </div>
+
+        {/* ── Date & Time ────────────────────────────────────────── */}
+        <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5" />
+            Date &amp; Time <span className="font-normal normal-case">(IST — Asia/Kolkata)</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Start</label>
+              <input
+                type="datetime-local"
+                className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                value={startIST}
+                onChange={(e) => setStartIST(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">End <span className="font-normal">(optional)</span></label>
+              <input
+                type="datetime-local"
+                className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                value={endIST}
+                onChange={(e) => setEndIST(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Text fields ────────────────────────────────────────── */}
         {[
           { label: "Title", key: "title" as const },
           { label: "Registration URL", key: "registration_url" as const },
@@ -72,6 +133,8 @@ function EditModal({ event, onClose, onSaved }: {
             />
           </div>
         ))}
+
+        {/* ── Flags ─────────────────────────────────────────────── */}
         <div className="flex gap-6">
           {(["is_free", "is_featured", "is_cancelled"] as const).map((k) => (
             <label key={k} className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
@@ -85,6 +148,7 @@ function EditModal({ event, onClose, onSaved }: {
             </label>
           ))}
         </div>
+
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-3 pt-2">
           <button onClick={onClose} className="flex-1 rounded-lg border border-border py-2 text-sm font-semibold">Cancel</button>
