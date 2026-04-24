@@ -1,0 +1,188 @@
+# ==============================================================================
+# Python & Backend
+# ==============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytestdebug.log
+
+# Translations
+*.mo
+*.pot
+
+# Django configurations (if ever applicable)
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Framework Extensions/Configs
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+celerybeat-schedule
+celerybeat.pid
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# ==============================================================================
+# Node.js & Frontend (Next.js)
+# ==============================================================================
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Env files (already covered below, but specific to frontend)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# ==============================================================================
+# Environment & Secrets (CRITICAL)
+# ==============================================================================
+.env
+.env.*
+!.env.example
+
+# ==============================================================================
+# OS & IDE
+# ==============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ / PyCharm / WebStorm
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Cursor
+.cursor/
+
+# ==============================================================================
+# Docker & Data
+# ==============================================================================
+.docker/
+docker-compose.override.yml
+data/
+snapshots/
+pgdata/
+redis_data/
+
+# ==============================================================================
+# Project Specific
+# ==============================================================================
+# Any uploaded files or auto-generated assets during dev
+uploads/
+tmp/
+temp/
+
+# ==============================================================================
+# Documentation
+# ==============================================================================
+# Ignore all markdown files by default
+*.md
+
+# Whitelist specific markdown files
+!README.md

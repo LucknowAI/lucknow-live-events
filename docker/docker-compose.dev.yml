@@ -1,0 +1,72 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lucknow_events
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api:
+    build: ../backend
+    command: uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+    ports: ["8000:8000"]
+    volumes:
+      - ../backend:/app:z
+      - ../data:/app/data:z
+      - ../scripts:/app/scripts:z
+    env_file: ../.env
+    depends_on: [postgres, redis]
+
+  worker:
+    build: ../backend
+    command: celery -A workers.celery_app worker --loglevel=info -c 8
+    volumes:
+      - ../backend:/app:z
+      - ../data:/app/data:z
+      - ../scripts:/app/scripts:z
+    env_file: ../.env
+    environment:
+      - PYTHONPATH=/app
+    depends_on: [redis, postgres]
+
+  beat:
+    build: ../backend
+    command: celery -A workers.celery_app beat --loglevel=info
+    volumes:
+      - ../backend:/app:z
+      - ../data:/app/data:z
+      - ../scripts:/app/scripts:z
+    env_file: ../.env
+    depends_on: [redis]
+
+  flower:
+    build: ../backend
+    command: celery -A workers.celery_app flower --port=5555
+    ports: ["5555:5555"]
+    volumes:
+      - ../backend:/app:z
+      - ../data:/app/data:z
+      - ../scripts:/app/scripts:z
+    env_file: ../.env
+    depends_on: [redis]
+
+  web:
+    build: ../apps/web
+    command: pnpm dev
+    ports: ["3000:3000"]
+    volumes:
+      - ../apps/web:/app:z
+    environment:
+      # Server-side fetches from inside the web container must hit the api service.
+      INTERNAL_API_URL: http://api:8000/api/v1
+
+volumes:
+  pgdata:
+
