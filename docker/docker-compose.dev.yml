@@ -22,6 +22,8 @@ services:
       - ../data:/app/data:z
       - ../scripts:/app/scripts:z
     env_file: ../.env
+    environment:
+      - DOCKER_ENV=1
     depends_on: [postgres, redis]
 
   worker:
@@ -34,6 +36,7 @@ services:
     env_file: ../.env
     environment:
       - PYTHONPATH=/app
+      - DOCKER_ENV=1
     depends_on: [redis, postgres]
 
   beat:

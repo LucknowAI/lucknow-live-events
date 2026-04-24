@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: lucknow-events-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # ── Non-secret config (safe to commit) ─────────────────────────────────
+      - key: GEMINI_MODEL
+        value: gemini-3-flash-preview
+      - key: ADMIN_EMAIL
+        value: admin@example.com
+      - key: CORS_ORIGINS
+        value: https://lucknow-events.vercel.app
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: STORAGE_TYPE
+        value: local
+      - key: LOCAL_STORAGE_PATH
+        value: /tmp/snapshots
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "60"
+
+      # ── Secrets — paste these in the Render dashboard after import ──────────
+      # DATABASE_URL  →  your Neon postgresql+asyncpg:// URL
+      - key: DATABASE_URL
+        sync: false
+      # REDIS_URL  →  your Upstash rediss:// URL
+      - key: REDIS_URL
+        sync: false
+      # GEMINI_API_KEY  →  your Google AI Studio key
+      - key: GEMINI_API_KEY
+        sync: false
+      # JWT_SECRET  →  long random string (keep the same one from .env.production)
+      - key: JWT_SECRET
+        sync: false
+      # ADMIN_PASSWORD_HASH  →  bcrypt hash WITHOUT the $$ docker escaping
+      #   correct format:  $2b$12$...
+      - key: ADMIN_PASSWORD_HASH
+        sync: false

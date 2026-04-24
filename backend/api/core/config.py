@@ -7,7 +7,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     DATABASE_URL: str
-    ALEMBIC_DATABASE_URL: str
+    # Only needed for running `alembic upgrade head` locally / in CI.
+    # The live API server never uses this — so it is optional for Render/Cloud Run.
+    ALEMBIC_DATABASE_URL: str | None = None
     REDIS_URL: str = "redis://redis:6379/0"
 
     GEMINI_API_KEY: str | None = None
