@@ -1,0 +1,110 @@
+Key,Type,Parent,Title,Objective,Files,Dependencies,AcceptanceCriteria,Testing,Complexity,Priority,Phase,Milestone,Labels
+E00,Epic,,Pre-Build Gates,,,,,,26,P0,-1,Gate,type:epic;phase:-1
+E01,Epic,,Pipeline Reliability & Scheduling,,,E00,,,21,P0,0,M0,type:epic;phase:0
+E02,Epic,,Data Integrity & Dedup Hardening,,,E00,,,8,P0,0,M0,type:epic;phase:0
+E03,Epic,,"Config, Secrets & AI Model Consolidation",,,E00,,,11,P0,0,M0,type:epic;phase:0
+E04,Epic,,Platform Hardening,,,E00,,,8,P0,0,M0,type:epic;phase:0
+E05,Epic,,Security Isolation,,,E00,,,13,P0,0,M0,type:epic;phase:0
+E06,Epic,,Testing & CI Foundation,,,,,,13,P0,0,M0,type:epic;phase:0
+E07,Epic,,Observability & SLOs,,,E01,,,8,P1,0,M0,type:epic;phase:0
+E08,Epic,,Domain Model Migration,,,"E01,E02,E06",,,26,P0,1,M1,type:epic;phase:1
+E09,Epic,,Lifecycle State-Machine Engine,,,E08,,,21,P0,1,M1,type:epic;phase:1
+E10,Epic,,Unified Ingestion & Structuring,,,E08,,,16,P0,1,M1,type:epic;phase:1
+E11,Epic,,Canonicalization: Dedup/Merge/Split,,,"E08,E00",,,21,P0,1,M1,type:epic;phase:1
+E12,Epic,,AI Enrichment via Model Gateway,,,"E03,E09",,,16,P1,1,M2,type:epic;phase:1
+E13,Epic,,Trust Score Engine,,,"E11,E12",,,16,P0,1,M2,type:epic;phase:1
+E14,Epic,,Auto-Generated Surfaces/Projections,,,E13,,,13,P1,1,M2,type:epic;phase:1
+E15,Epic,,Search-First,,,"E14,E13",,,16,P1,2,M3,type:epic;phase:2
+E16,Epic,,Organizer Identity & Reputation,,,"E08,E13",,,21,P1,2,M4,type:epic;phase:2
+E17,Epic,,"RBAC, Steward Audit & Access",,,E05,,,13,P1,2,M4,type:epic;phase:2
+E18,Epic,,Semantic/NL Search,,,E15,,,16,P2,3,M5,type:epic;phase:3
+E19,Epic,,Proactive Discovery,,,E16,,,16,P2,3,M5,type:epic;phase:3
+E20,Epic,,Analytics Engine,,,E14,,,21,P2,3,M5,type:epic;phase:3
+E21,Epic,,Ecosystem Platform,,,"E18,E20",,,34,P2,4,M6,type:epic;phase:4
+E22,Epic,,Multi-City Federation,,,E08,,,13,P2,4,M6,type:epic;phase:4
+E00-S1-T1,Task,E00,Demand validation experiment (100 users),Prove repeat demand before pipeline investment,apps/web (analytics event),,"2wk run, 100 users, return metric, continue/kill memo",product experiment; tracking verified,8,P0,-1,Gate,type:task;area:product
+E00-S2-T1,Task,E00,Legal/ToS/robots + DPDP consent position,Defensible posture for scraping & organizer PII,docs/legal/COMPLIANCE.md; adapters/base.py,,"ToS matrix, robots, takedown, DPDP basis, data license",doc review,5,P0,-1,Gate,type:task;area:security;area:legal
+E00-S3-T1,Task,E00,Input-security threat model,Defenses for hostile web input,docs/security/THREAT_MODEL.md,,"prompt-injection, DoS, XSS controls mapped to E05/E12",traceability,5,P0,-1,Gate,type:task;area:security
+E00-S4-T1,Task,E00,Dedup spec + labeled eval set,Concretize the core capability,docs/spec/DEDUP.md; tests/fixtures/dedup/,,"blocking keys, features, thresholds, series, conflict rules; >=50 labeled pairs",eval harness stub,5,P0,-1,Gate,type:task;area:ingestion;area:ai
+E00-S5-T1,Task,E00,V1 scope-trim sign-off,Record frozen trimmed scope,docs/DECISIONS.md,E00-S1-T1,push-first ingestion; semantic deferred; trust as badges,n/a,3,P0,-1,Gate,type:task;area:product
+E01-S1-T1,Task,E01,Durable scheduler -> queue -> worker,Fix missing prod worker/beat,render.yaml; docker-compose.dev.yml; workers/celery_app.py; workers/schedules.py; infra/scheduler,E00,scheduled tasks run in prod; single-fire; autoscale,"integration: enqueue once, idempotent",8,P0,0,M0,type:task;area:infra;area:ingestion
+E01-S1-T2,Task,E01,Fix async execution (get_event_loop),Safe async on 3.12 prefork,workers/tasks/discovery.py; workers/utils.py,,safe runner; no deprecation; discovery runs,unit + smoke,2,P1,0,M0,type:task;area:ingestion
+E01-S2-T1,Task,E01,DB content-hash change detection,Stop re-processing unchanged pages,ingestion/pipeline.py; ingestion/storage.py; models/raw_event.py; migration,E01-S1-T1,content_hash persisted; unchanged skips AI; survives restart,integration,5,P0,0,M0,type:task;area:ingestion
+E01-S3-T1,Task,E01,Pipeline-health alerting,No-events/no-discovery paging,platform/observability; infra/alerts,E01-S1-T1,alert on published/hr=0 or discovery=0; runbook,synthetic trigger,3,P0,0,M0,type:task;area:observability
+E02-S1-T1,Task,E02,Unique canonical_url + escape LIKE,Fix double-insert & over-merge,ingestion/dedup.py; models/event.py; migration,E00-S4-T1,no double-insert; no substring over-merge; LIKE escaped,unit+integration,5,P0,0,M0,type:task;area:data
+E02-S1-T2,Task,E02,Reconcile date sentinels (interim),Stop 2027/2050/2090 conflict,ingestion/pipeline.py; workers/tasks/crawl.py,,one sentinel; cleanup matches,unit,3,P1,0,M0,type:task;area:ingestion
+E03-S1-T1,Task,E03,Single model config,Kill 4 model strings + hardcode,core/config.py; ai/*; workers/tasks/discovery.py; .env.example; render.yaml,E00,one setting everywhere; startup validation; grep-clean,unit,5,P0,0,M0,type:task;area:ai
+E03-S2-T1,Task,E03,Config & secrets hygiene,Remove dead/broken config,core/config.py; ingestion/storage.py; .env.example; render.yaml; README.md,,no default secret; r2 no crash; dead vars gone; README fixed,config load + smoke,3,P1,0,M0,type:task;area:security
+E03-S2-T2,Task,E03,Facet counts in-DB,Remove O(n) in-Python facets,api/services/discovery_service.py,,facets aggregated in DB,query test,3,P2,0,M0,type:task;area:api
+E04-S1-T1,Task,E04,PgBouncer pooling,Remove per-request connection,core/database.py; render.yaml; docker-compose.dev.yml,,pooled; bounded connections under load,load test,3,P0,0,M0,type:task;area:data;area:infra
+E04-S2-T1,Task,E04,Distributed rate limiting,Global limits across instances,core/limiter.py; api/main.py; routers/submissions.py,,enforced across 2+ instances; tiers,integration 2 instances,5,P0,0,M0,type:task;area:api;area:security
+E05-S1-T1,Task,E05,SSRF sandbox + allow/deny,Block internal fetches,adapters/playwright_util.py; adapters/base.py; renderer infra,E00-S3-T1,internal/metadata unreachable; timeouts/size caps,security suite,5,P0,0,M0,type:task;area:security
+E05-S2-T1,Task,E05,Isolate Playwright pool,Chromium out of API image,Dockerfile; Dockerfile.renderer; docker-compose.dev.yml,E01-S1-T1,API image no Chromium; isolated pool warm floor,build+smoke,3,P1,0,M0,type:task;area:infra
+E05-S3-T1,Task,E05,Sanitize scraped content + cost breaker,XSS + amplification DoS defense,normalizers/text.py; routers/submissions.py; services/submission_service.py; web event page,"E00-S3-T1,E04-S2-T1",descriptions sanitized; submission cost quota+breaker,xss + abuse test,5,P0,0,M0,type:task;area:security
+E06-S1-T1,Task,E06,CI: lint/test/scan gated,No merge without green,/.github/workflows/ci.yml; pyproject.toml; package.json,,PR blocked on fail; scans run; tests/ exists,meta: failing test blocks,5,P0,0,M0,type:task;area:infra;area:test
+E06-S2-T1,Task,E06,Decision-fn unit tests,Test what publishes,tests/unit/*; ingestion/*,"E06-S1-T1,E00-S4-T1",>=90% branch on dedup/relevance/publish; runs vs labeled set,these are the tests,5,P0,0,M0,type:task;area:test
+E06-S3-T1,Task,E06,Golden dataset harness,Regression net (mocked AI),tests/fixtures/pages/; tests/integration; tests/mocks,E06-S1-T1,pipeline vs fixtures deterministic; regressions fail CI,harness,3,P1,0,M0,type:task;area:test
+E07-S1-T1,Task,E07,Metrics + tracing (correlation id),See async lifecycle end-to-end,platform/observability; api/main.py; workers/*; ai/gemini_client.py,E01-S1-T1,RED/USE; traceable by id; SLO dashboard,trace across queue,5,P1,0,M0,type:task;area:observability
+E07-S1-T2,Task,E07,Pipeline & data-quality dashboards,Visualize health signals,infra/dashboards,E07-S1-T1,health+quality signals rendered,smoke under load,3,P1,0,M0,type:task;area:observability
+E08-S1-T1,Task,E08,City dimension + backfill,First-class city scope,models/city.py; migration,E02,city exists; rows backfilled Lucknow,migration up/down,5,P0,1,M1,type:task;area:data
+E08-S2-T1,Task,E08,canonical_event nullable date + status,Replace sentinel hack,models/event.py; migration; services/event_service.py,"E08-S1-T1,E02-S1-T2",nullable start_at + date_status; sentinels migrated; calendar excludes TBA,migration+unit,8,P0,1,M1,type:task;area:data
+E08-S3-T1,Task,E08,source_observation evidence + backfill,Merge-not-duplicate provenance,models/source_observation.py; models/raw_event.py; migration,E08-S2-T1,each event >=1 observation; provenance preserved,backfill integrity,8,P0,1,M1,type:task;area:data
+E08-S4-T1,Task,E08,Composite unique constraints,Per-city idempotency,models/event.py; migration,"E08-S1-T1,E02-S1-T1","(city,canonical_url)+(city,slug) unique",integration reject dup,5,P0,1,M1,type:task;area:data
+E09-S1-T1,Task,E09,Persisted resumable state machine,Resilient lifecycle,contexts/lifecycle/*; models/raw_event.py; migration,E08-S3-T1,persisted state; resume on crash; stages idempotent; stuck queryable,kill/resume + idempotency,13,P0,1,M1,type:task;area:ingestion
+E09-S2-T1,Task,E09,Queue lanes + DLQ,Prevent head-of-line blocking,platform/queue; workers/celery_app.py; workers/tasks/*,E09-S1-T1,render bursts dont block; poison->DLQ,integration,5,P1,1,M1,type:task;area:ingestion;area:infra
+E10-S1-T1,Task,E10,Pluggable adapter contract,Add source by config,contexts/ingestion/adapters/*; adapters/base.py,E09-S1-T1,new source=config+adapter; generic/static conform,contract test,5,P1,1,M1,type:task;area:ingestion
+E10-S2-T1,Task,E10,Validation stage,Nothing invalid publishes,contexts/lifecycle/validate.py; normalizers/*,E09-S1-T1,non-events rejected; dead link blocks publish,unit+integration,5,P0,1,M1,type:task;area:ingestion
+E11-S1-T1,Task,E11,Similarity + precision-first match,Decide same event,contexts/event/dedup.py,"E08-S3-T1,E00-S4-T1",combined similarity; meets eval precision; series handled,precision/recall gate in CI,8,P0,1,M1,type:task;area:ingestion;area:ai
+E11-S2-T1,Task,E11,Merge + reversible split,Preserve evidence,contexts/event/merge.py; models/source_observation.py,E11-S1-T1,merge keeps evidence+reason; split restores,merge/split roundtrip,8,P0,1,M1,type:task;area:data
+E11-S3-T1,Task,E11,Steward review surface,Human decides ambiguous,routers/admin/*; web mission-control component,E11-S1-T1,uncertain queue w/ reasoning+evidence; decision updates canonical,api+e2e,5,P1,1,M1,type:task;area:api;area:frontend
+E12-S1-T1,Task,E12,Model Gateway,Contain model volatility,platform/gateway/*; ai/*,E03-S1-T1,one entry; cache; schema-constrained; fallback; batch,unit mocked,8,P1,1,M2,type:task;area:ai
+E12-S2-T1,Task,E12,Enrichment (category/tags/summary/embedding),Auto-classify,contexts/enrichment/*; models/event.py,E12-S1-T1,auto-classified; explainable,unit mocked,5,P1,1,M2,type:task;area:ai
+E13-S1-T1,Task,E13,Trust scoring versioned + breakdown,Transparent deterministic trust,contexts/trust/*; models/trust_score.py; migration,"E11-S2-T1,E12-S2-T1",deterministic; policy_version; breakdown; explainable,unit+determinism,8,P0,1,M2,type:task;area:trust
+E13-S2-T1,Task,E13,Publish gate + Featured + config weights,Gate & objective Featured,contexts/trust/policy.py; contexts/lifecycle/publish.py,E13-S1-T1,below thr->moderation; Featured objective; weights tunable+versioned,unit,5,P0,1,M2,type:task;area:trust
+E13-S2-T2,Task,E13,Trust as qualitative badges,UX: badges not raw score,web EventCard; web event page; lib/api.ts,E13-S1-T1,badges shown; raw score internal,component test,3,P1,1,M2,type:task;area:frontend
+E14-S1-T1,Task,E14,Materialize search_document,No runtime joins,contexts/search/projection.py; migration,E13-S2-T1,one row/published event; rebuilt on publish,integration,5,P1,1,M2,type:task;area:api;area:search
+E14-S2-T1,Task,E14,Feeds as CDN objects + purge,Replace feed stub,workers/tasks/feeds.py; routers/feeds.py; platform/cache/*,E14-S1-T1,static feeds; update within TTL; keys purged,integration,5,P1,1,M2,type:task;area:api
+E14-S3-T1,Task,E14,Surfaces generated from canonical,No hand-authored surfaces,web events/*; web calendar; components/*,E14-S1-T1,all surfaces from canonical; revalidate; register out,e2e,3,P1,1,M2,type:task;area:frontend
+E15-S1,Story,E15,FTS + filters on projection,,,,,,5,P1,2,M3,type:story;area:search
+E15-S2,Story,E15,Ranking relevance x trust x freshness,,,,,,5,P1,2,M3,type:story;area:search
+E15-S3,Story,E15,Fix indexed search (ILIKE OR-branch),,,,,,2,P1,2,M3,type:story;area:search
+E15-S4,Story,E15,Search health metrics,,,,,,3,P2,2,M3,type:story;area:observability
+E16-S1,Story,E16,Organizer & Venue entities + backfill,,,,,,5,P1,2,M4,type:story;area:data
+E16-S2,Story,E16,Auto organizer profiles,,,,,,5,P1,2,M4,type:story;area:api
+E16-S3,Story,E16,Organizer claim & verify,,,,,,5,P1,2,M4,type:story;area:api
+E16-S4,Story,E16,Reputation v1 (blocked by E00-S2),,,,,,8,P1,2,M4,type:story;area:trust
+E17-S1,Story,E17,RBAC roles + refresh tokens,,,,,,5,P1,2,M4,type:story;area:security
+E17-S2,Story,E17,Steward audit log + 2FA + policy approval,,,,,,8,P1,2,M4,type:story;area:security
+E18-S1,Story,E18,Embeddings + pgvector HNSW,,,,,,5,P2,3,M5,type:story;area:search;area:ai
+E18-S2,Story,E18,Hybrid search RRF + rerank,,,,,,8,P2,3,M5,type:story;area:search
+E18-S3,Story,E18,NL query understanding,,,,,,5,P2,3,M5,type:story;area:ai
+E19-S1,Story,E19,Subscriptions,,,,,,5,P2,3,M5,type:story;area:api
+E19-S2,Story,E19,Weekly digest (opt-in/unsub),,,,,,8,P2,3,M5,type:story;area:api
+E19-S3,Story,E19,Notifications,,,,,,5,P2,3,M5,type:story;area:api
+E20-S1,Story,E20,Interaction capture (append-only),,,,,,5,P2,3,M5,type:story;area:data
+E20-S2,Story,E20,Organizer analytics,,,,,,8,P2,3,M5,type:story;area:api
+E20-S3,Story,E20,Attendee analytics/recos,,,,,,8,P2,3,M5,type:story;area:ai
+E21-S1,Story,E21,Public API + keys/quotas,,,,,,8,P2,4,M6,type:story;area:api
+E21-S2,Story,E21,Conversational assistant,,,,,,13,P2,4,M6,type:story;area:ai
+E21-S3,Story,E21,Sponsor dashboards (data-license gated),,,,,,8,P2,4,M6,type:story;area:api
+E21-S4,Story,E21,City ecosystem reports,,,,,,5,P2,4,M6,type:story;area:api
+E22-S1,Story,E22,Per-city isolation + 2nd-city proof,,,,,,13,P2,4,M6,type:story;area:data
+E23,Epic,,Multi-Tenancy,,,E08,,,21,P0,1,M1,type:epic;phase:1;platform
+E24,Epic,,Instance Configuration,,,E23,,,21,P0,1,M2,type:epic;phase:1;platform
+E25,Epic,,Plugin System,,,"E10,E12,E24",,,26,P1,2,M4,type:epic;phase:2;platform
+E26,Epic,,Open-Source Readiness,,,E24,,,16,P1,2,M4,type:epic;phase:2;platform
+E23-S1-T1,Task,E23,Generalize migration City->Tenant,"tenant+instance_config tables; tenant_id all tables; (tenant_id,...) unique","core/domain/tenant; all models; migration",E08,"every table tenant-scoped; Lucknow backfilled","migration up/down; backfill",8,P0,1,M1,type:task;area:data;platform
+E23-S2-T1,Task,E23,Tenant-resolution middleware,"domain->context; fixed-in-config single-tenant","core/tenancy/*; api/main.py",E23-S1-T1,"correct tenant/request; 404 unknown; single-tenant ignores Host","resolution tests",5,P0,1,M1,type:task;area:api;platform
+E23-S3-T1,Task,E23,RLS policies + worker tenant-context,"DB-enforced isolation; jobs carry tenant","migration; workers/*",E23-S1-T1,"isolation at DB; jobs set context","integration",5,P0,1,M1,type:task;area:security;platform
+E23-S4-T1,Task,E23,Tenant-isolation test suite + policy detector,"cross-tenant read impossible; missing-policy fails","tests/isolation/*",E23-S3-T1,"A cannot read B; test fails if table lacks policy","CI-gating security tests",3,P0,1,M1,type:test;area:security;platform
+E24-S1-T1,Task,E24,Config schema + validated loader,"defaults->config->secrets; fail loud","core/config/*",E23-S1-T1,"invalid config fails; secrets by ref","schema validation tests",8,P0,1,M2,type:task;area:infra;platform
+E24-S2-T1,Task,E24,Remove hard-coded Lucknow assumptions,"city defaults, prompt lists, timezone -> config","ingestion/relevance.py; ai prompts; models",E24-S1-T1,"config-over-code CI gate passes; no tenant literal in logic","gate test + unit",8,P0,1,M2,type:refactor;area:ingestion;platform
+E24-S3-T1,Task,E24,Themeable frontend from config,"branding/theme/locale/SEO; light-mode","apps/web/*",E24-S1-T1,"branding/theme/language config-driven","component tests",5,P1,1,M2,type:task;area:frontend;platform
+E25-S1,Story,E25,Define ports + registry,,,E24-S1-T1,,,8,P1,2,M4,type:story;area:infra;platform
+E25-S2,Story,E25,Plugin SDK + conformance harness,,,E25-S1,,,8,P1,2,M4,type:story;area:test;platform
+E25-S3,Story,E25,Refactor providers behind ports,,,E25-S1,,,8,P1,2,M4,type:story;area:infra;platform
+E25-S4,Story,E25,Second implementations (on demand),,,E25-S3,,,5,P2,2,M4,type:story;area:ai;platform
+E26-S1,Story,E26,One-command deploy + _example,,,E24-S1-T1,,,5,P1,2,M4,type:story;area:infra;platform
+E26-S2,Story,E26,Docs site + quickstart,,,,,,5,P1,2,M4,type:story;area:docs;platform
+E26-S3,Story,E26,Versioning core + plugin-API,,,E25-S1,,,3,P1,2,M4,type:story;area:infra;platform
+E26-S4,Story,E26,Contribution workflow + config-over-code CI gate,,,E24-S2-T1,,,3,P1,2,M4,type:story;area:infra;platform

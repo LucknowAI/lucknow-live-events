@@ -1,0 +1,911 @@
+Issue Type,Summary,Priority,Story Points,Description,Labels,Labels,Labels,Labels,Labels,Labels
+Epic,[E00] Pre-Build Gates,Highest,,"Epic. Phase -1, Milestone Gate.",type-epic,phase-neg1,tier-now,ms-Gate,,
+Epic,[E01] Pipeline Reliability & Scheduling,Highest,,"Epic. Phase 0, Milestone M0.
+
+Depends on: E00",type-epic,phase-0,tier-now,ms-M0,,
+Epic,[E02] Data Integrity & Dedup Hardening,Highest,,"Epic. Phase 0, Milestone M0.
+
+Depends on: E00",type-epic,phase-0,tier-now,ms-M0,,
+Epic,"[E03] Config, Secrets & AI Model Consolidation",Highest,,"Epic. Phase 0, Milestone M0.
+
+Depends on: E00",type-epic,phase-0,tier-now,ms-M0,,
+Epic,[E04] Platform Hardening,Highest,,"Epic. Phase 0, Milestone M0.
+
+Depends on: E00",type-epic,phase-0,tier-now,ms-M0,,
+Epic,[E05] Security Isolation,Highest,,"Epic. Phase 0, Milestone M0.
+
+Depends on: E00",type-epic,phase-0,tier-now,ms-M0,,
+Epic,[E06] Testing & CI Foundation,Highest,,"Epic. Phase 0, Milestone M0.",type-epic,phase-0,tier-now,ms-M0,,
+Epic,[E07] Observability & SLOs,High,,"Epic. Phase 0, Milestone M0.
+
+Depends on: E01",type-epic,phase-0,tier-now,ms-M0,,
+Epic,[E08] Domain Model Migration,Highest,,"Epic. Phase 1, Milestone M1.
+
+Depends on: E01,E02,E06",type-epic,phase-1,tier-next,ms-M1,,
+Epic,[E09] Lifecycle State-Machine Engine,Highest,,"Epic. Phase 1, Milestone M1.
+
+Depends on: E08",type-epic,phase-1,tier-next,ms-M1,,
+Epic,[E10] Unified Ingestion & Structuring,Highest,,"Epic. Phase 1, Milestone M1.
+
+Depends on: E08",type-epic,phase-1,tier-next,ms-M1,,
+Epic,[E11] Canonicalization: Dedup/Merge/Split,Highest,,"Epic. Phase 1, Milestone M1.
+
+Depends on: E08,E00",type-epic,phase-1,tier-next,ms-M1,,
+Epic,[E12] AI Enrichment via Model Gateway,High,,"Epic. Phase 1, Milestone M2.
+
+Depends on: E03,E09",type-epic,phase-1,tier-next,ms-M2,,
+Epic,[E13] Trust Score Engine,Highest,,"Epic. Phase 1, Milestone M2.
+
+Depends on: E11,E12",type-epic,phase-1,tier-next,ms-M2,,
+Epic,[E14] Auto-Generated Surfaces/Projections,High,,"Epic. Phase 1, Milestone M2.
+
+Depends on: E13",type-epic,phase-1,tier-next,ms-M2,,
+Epic,[E15] Search-First,High,,"Epic. Phase 2, Milestone M3.
+
+Depends on: E14,E13",type-epic,phase-2,tier-later,ms-M3,,
+Epic,[E16] Organizer Identity & Reputation,High,,"Epic. Phase 2, Milestone M4.
+
+Depends on: E08,E13",type-epic,phase-2,tier-later,ms-M4,,
+Epic,"[E17] RBAC, Steward Audit & Access",High,,"Epic. Phase 2, Milestone M4.
+
+Depends on: E05",type-epic,phase-2,tier-later,ms-M4,,
+Epic,[E18] Semantic/NL Search,Medium,,"Epic. Phase 3, Milestone M5.
+
+Depends on: E15",type-epic,phase-3,tier-later,ms-M5,,
+Epic,[E19] Proactive Discovery,Medium,,"Epic. Phase 3, Milestone M5.
+
+Depends on: E16",type-epic,phase-3,tier-later,ms-M5,,
+Epic,[E20] Analytics Engine,Medium,,"Epic. Phase 3, Milestone M5.
+
+Depends on: E14",type-epic,phase-3,tier-later,ms-M5,,
+Epic,[E21] Ecosystem Platform,Medium,,"Epic. Phase 4, Milestone M6.
+
+Depends on: E18,E20",type-epic,phase-4,tier-later,ms-M6,,
+Task,[E00-S1-T1] Demand validation experiment (100 users),Highest,8,"Objective:
+Prove repeat demand before pipeline investment
+
+Acceptance Criteria:
+2wk run, 100 users, return metric, continue/kill memo
+
+Testing:
+product experiment; tracking verified
+
+Files:
+apps/web (analytics event)
+
+[E00-S1-T1 | epic E00 (Pre-Build Gates) | Gate]",type-task,area-product,phase-neg1,tier-now,ms-Gate,
+Task,[E00-S2-T1] Legal/ToS/robots + DPDP consent position,Highest,5,"Objective:
+Defensible posture for scraping & organizer PII
+
+Acceptance Criteria:
+ToS matrix, robots, takedown, DPDP basis, data license
+
+Testing:
+doc review
+
+Files:
+docs/legal/COMPLIANCE.md; adapters/base.py
+
+[E00-S2-T1 | epic E00 (Pre-Build Gates) | Gate]",type-task,area-security,area-legal,phase-neg1,tier-now,ms-Gate
+Task,[E00-S3-T1] Input-security threat model,Highest,5,"Objective:
+Defenses for hostile web input
+
+Acceptance Criteria:
+prompt-injection, DoS, XSS controls mapped to E05/E12
+
+Testing:
+traceability
+
+Files:
+docs/security/THREAT_MODEL.md
+
+[E00-S3-T1 | epic E00 (Pre-Build Gates) | Gate]",type-task,area-security,phase-neg1,tier-now,ms-Gate,
+Task,[E00-S4-T1] Dedup spec + labeled eval set,Highest,5,"Objective:
+Concretize the core capability
+
+Acceptance Criteria:
+blocking keys, features, thresholds, series, conflict rules; >=50 labeled pairs
+
+Testing:
+eval harness stub
+
+Files:
+docs/spec/DEDUP.md; tests/fixtures/dedup/
+
+[E00-S4-T1 | epic E00 (Pre-Build Gates) | Gate]",type-task,area-ingestion,area-ai,phase-neg1,tier-now,ms-Gate
+Task,[E00-S5-T1] V1 scope-trim sign-off,Highest,3,"Objective:
+Record frozen trimmed scope
+
+Acceptance Criteria:
+push-first ingestion; semantic deferred; trust as badges
+
+Testing:
+n/a
+
+Files:
+docs/DECISIONS.md
+
+Blocked by (link after import):
+E00-S1-T1
+
+[E00-S5-T1 | epic E00 (Pre-Build Gates) | Gate]",type-task,area-product,phase-neg1,tier-now,ms-Gate,
+Task,[E01-S1-T1] Durable scheduler -> queue -> worker,Highest,8,"Objective:
+Fix missing prod worker/beat
+
+Acceptance Criteria:
+scheduled tasks run in prod; single-fire; autoscale
+
+Testing:
+integration: enqueue once, idempotent
+
+Files:
+render.yaml; docker-compose.dev.yml; workers/celery_app.py; workers/schedules.py; infra/scheduler
+
+Blocked by (link after import):
+E00
+
+[E01-S1-T1 | epic E01 (Pipeline Reliability & Scheduling) | M0]",type-task,area-infra,area-ingestion,phase-0,tier-now,ms-M0
+Task,[E01-S1-T2] Fix async execution (get_event_loop),High,2,"Objective:
+Safe async on 3.12 prefork
+
+Acceptance Criteria:
+safe runner; no deprecation; discovery runs
+
+Testing:
+unit + smoke
+
+Files:
+workers/tasks/discovery.py; workers/utils.py
+
+[E01-S1-T2 | epic E01 (Pipeline Reliability & Scheduling) | M0]",type-task,area-ingestion,phase-0,tier-now,ms-M0,
+Task,[E01-S2-T1] DB content-hash change detection,Highest,5,"Objective:
+Stop re-processing unchanged pages
+
+Acceptance Criteria:
+content_hash persisted; unchanged skips AI; survives restart
+
+Testing:
+integration
+
+Files:
+ingestion/pipeline.py; ingestion/storage.py; models/raw_event.py; migration
+
+Blocked by (link after import):
+E01-S1-T1
+
+[E01-S2-T1 | epic E01 (Pipeline Reliability & Scheduling) | M0]",type-task,area-ingestion,phase-0,tier-now,ms-M0,
+Task,[E01-S3-T1] Pipeline-health alerting,Highest,3,"Objective:
+No-events/no-discovery paging
+
+Acceptance Criteria:
+alert on published/hr=0 or discovery=0; runbook
+
+Testing:
+synthetic trigger
+
+Files:
+platform/observability; infra/alerts
+
+Blocked by (link after import):
+E01-S1-T1
+
+[E01-S3-T1 | epic E01 (Pipeline Reliability & Scheduling) | M0]",type-task,area-observability,phase-0,tier-now,ms-M0,
+Task,[E02-S1-T1] Unique canonical_url + escape LIKE,Highest,5,"Objective:
+Fix double-insert & over-merge
+
+Acceptance Criteria:
+no double-insert; no substring over-merge; LIKE escaped
+
+Testing:
+unit+integration
+
+Files:
+ingestion/dedup.py; models/event.py; migration
+
+Blocked by (link after import):
+E00-S4-T1
+
+[E02-S1-T1 | epic E02 (Data Integrity & Dedup Hardening) | M0]",type-task,area-data,phase-0,tier-now,ms-M0,
+Task,[E02-S1-T2] Reconcile date sentinels (interim),High,3,"Objective:
+Stop 2027/2050/2090 conflict
+
+Acceptance Criteria:
+one sentinel; cleanup matches
+
+Testing:
+unit
+
+Files:
+ingestion/pipeline.py; workers/tasks/crawl.py
+
+[E02-S1-T2 | epic E02 (Data Integrity & Dedup Hardening) | M0]",type-task,area-ingestion,phase-0,tier-now,ms-M0,
+Task,[E03-S1-T1] Single model config,Highest,5,"Objective:
+Kill 4 model strings + hardcode
+
+Acceptance Criteria:
+one setting everywhere; startup validation; grep-clean
+
+Testing:
+unit
+
+Files:
+core/config.py; ai/*; workers/tasks/discovery.py; .env.example; render.yaml
+
+Blocked by (link after import):
+E00
+
+[E03-S1-T1 | epic E03 (Config, Secrets & AI Model Consolidation) | M0]",type-task,area-ai,phase-0,tier-now,ms-M0,
+Task,[E03-S2-T1] Config & secrets hygiene,High,3,"Objective:
+Remove dead/broken config
+
+Acceptance Criteria:
+no default secret; r2 no crash; dead vars gone; README fixed
+
+Testing:
+config load + smoke
+
+Files:
+core/config.py; ingestion/storage.py; .env.example; render.yaml; README.md
+
+[E03-S2-T1 | epic E03 (Config, Secrets & AI Model Consolidation) | M0]",type-task,area-security,phase-0,tier-now,ms-M0,
+Task,[E03-S2-T2] Facet counts in-DB,Medium,3,"Objective:
+Remove O(n) in-Python facets
+
+Acceptance Criteria:
+facets aggregated in DB
+
+Testing:
+query test
+
+Files:
+api/services/discovery_service.py
+
+[E03-S2-T2 | epic E03 (Config, Secrets & AI Model Consolidation) | M0]",type-task,area-api,phase-0,tier-now,ms-M0,
+Task,[E04-S1-T1] PgBouncer pooling,Highest,3,"Objective:
+Remove per-request connection
+
+Acceptance Criteria:
+pooled; bounded connections under load
+
+Testing:
+load test
+
+Files:
+core/database.py; render.yaml; docker-compose.dev.yml
+
+[E04-S1-T1 | epic E04 (Platform Hardening) | M0]",type-task,area-data,area-infra,phase-0,tier-now,ms-M0
+Task,[E04-S2-T1] Distributed rate limiting,Highest,5,"Objective:
+Global limits across instances
+
+Acceptance Criteria:
+enforced across 2+ instances; tiers
+
+Testing:
+integration 2 instances
+
+Files:
+core/limiter.py; api/main.py; routers/submissions.py
+
+[E04-S2-T1 | epic E04 (Platform Hardening) | M0]",type-task,area-api,area-security,phase-0,tier-now,ms-M0
+Task,[E05-S1-T1] SSRF sandbox + allow/deny,Highest,5,"Objective:
+Block internal fetches
+
+Acceptance Criteria:
+internal/metadata unreachable; timeouts/size caps
+
+Testing:
+security suite
+
+Files:
+adapters/playwright_util.py; adapters/base.py; renderer infra
+
+Blocked by (link after import):
+E00-S3-T1
+
+[E05-S1-T1 | epic E05 (Security Isolation) | M0]",type-task,area-security,phase-0,tier-now,ms-M0,
+Task,[E05-S2-T1] Isolate Playwright pool,High,3,"Objective:
+Chromium out of API image
+
+Acceptance Criteria:
+API image no Chromium; isolated pool warm floor
+
+Testing:
+build+smoke
+
+Files:
+Dockerfile; Dockerfile.renderer; docker-compose.dev.yml
+
+Blocked by (link after import):
+E01-S1-T1
+
+[E05-S2-T1 | epic E05 (Security Isolation) | M0]",type-task,area-infra,phase-0,tier-now,ms-M0,
+Task,[E05-S3-T1] Sanitize scraped content + cost breaker,Highest,5,"Objective:
+XSS + amplification DoS defense
+
+Acceptance Criteria:
+descriptions sanitized; submission cost quota+breaker
+
+Testing:
+xss + abuse test
+
+Files:
+normalizers/text.py; routers/submissions.py; services/submission_service.py; web event page
+
+Blocked by (link after import):
+E00-S3-T1,E04-S2-T1
+
+[E05-S3-T1 | epic E05 (Security Isolation) | M0]",type-task,area-security,phase-0,tier-now,ms-M0,
+Task,[E06-S1-T1] CI: lint/test/scan gated,Highest,5,"Objective:
+No merge without green
+
+Acceptance Criteria:
+PR blocked on fail; scans run; tests/ exists
+
+Testing:
+meta: failing test blocks
+
+Files:
+/.github/workflows/ci.yml; pyproject.toml; package.json
+
+[E06-S1-T1 | epic E06 (Testing & CI Foundation) | M0]",type-task,area-infra,area-test,phase-0,tier-now,ms-M0
+Task,[E06-S2-T1] Decision-fn unit tests,Highest,5,"Objective:
+Test what publishes
+
+Acceptance Criteria:
+>=90% branch on dedup/relevance/publish; runs vs labeled set
+
+Testing:
+these are the tests
+
+Files:
+tests/unit/*; ingestion/*
+
+Blocked by (link after import):
+E06-S1-T1,E00-S4-T1
+
+[E06-S2-T1 | epic E06 (Testing & CI Foundation) | M0]",type-task,area-test,phase-0,tier-now,ms-M0,
+Task,[E06-S3-T1] Golden dataset harness,High,3,"Objective:
+Regression net (mocked AI)
+
+Acceptance Criteria:
+pipeline vs fixtures deterministic; regressions fail CI
+
+Testing:
+harness
+
+Files:
+tests/fixtures/pages/; tests/integration; tests/mocks
+
+Blocked by (link after import):
+E06-S1-T1
+
+[E06-S3-T1 | epic E06 (Testing & CI Foundation) | M0]",type-task,area-test,phase-0,tier-now,ms-M0,
+Task,[E07-S1-T1] Metrics + tracing (correlation id),High,5,"Objective:
+See async lifecycle end-to-end
+
+Acceptance Criteria:
+RED/USE; traceable by id; SLO dashboard
+
+Testing:
+trace across queue
+
+Files:
+platform/observability; api/main.py; workers/*; ai/gemini_client.py
+
+Blocked by (link after import):
+E01-S1-T1
+
+[E07-S1-T1 | epic E07 (Observability & SLOs) | M0]",type-task,area-observability,phase-0,tier-now,ms-M0,
+Task,[E07-S1-T2] Pipeline & data-quality dashboards,High,3,"Objective:
+Visualize health signals
+
+Acceptance Criteria:
+health+quality signals rendered
+
+Testing:
+smoke under load
+
+Files:
+infra/dashboards
+
+Blocked by (link after import):
+E07-S1-T1
+
+[E07-S1-T2 | epic E07 (Observability & SLOs) | M0]",type-task,area-observability,phase-0,tier-now,ms-M0,
+Task,[E08-S1-T1] City dimension + backfill,Highest,5,"Objective:
+First-class city scope
+
+Acceptance Criteria:
+city exists; rows backfilled Lucknow
+
+Testing:
+migration up/down
+
+Files:
+models/city.py; migration
+
+Blocked by (link after import):
+E02
+
+[E08-S1-T1 | epic E08 (Domain Model Migration) | M1]",type-task,area-data,phase-1,tier-next,ms-M1,
+Task,[E08-S2-T1] canonical_event nullable date + status,Highest,8,"Objective:
+Replace sentinel hack
+
+Acceptance Criteria:
+nullable start_at + date_status; sentinels migrated; calendar excludes TBA
+
+Testing:
+migration+unit
+
+Files:
+models/event.py; migration; services/event_service.py
+
+Blocked by (link after import):
+E08-S1-T1,E02-S1-T2
+
+[E08-S2-T1 | epic E08 (Domain Model Migration) | M1]",type-task,area-data,phase-1,tier-next,ms-M1,
+Task,[E08-S3-T1] source_observation evidence + backfill,Highest,8,"Objective:
+Merge-not-duplicate provenance
+
+Acceptance Criteria:
+each event >=1 observation; provenance preserved
+
+Testing:
+backfill integrity
+
+Files:
+models/source_observation.py; models/raw_event.py; migration
+
+Blocked by (link after import):
+E08-S2-T1
+
+[E08-S3-T1 | epic E08 (Domain Model Migration) | M1]",type-task,area-data,phase-1,tier-next,ms-M1,
+Task,[E08-S4-T1] Composite unique constraints,Highest,5,"Objective:
+Per-city idempotency
+
+Acceptance Criteria:
+(city,canonical_url)+(city,slug) unique
+
+Testing:
+integration reject dup
+
+Files:
+models/event.py; migration
+
+Blocked by (link after import):
+E08-S1-T1,E02-S1-T1
+
+[E08-S4-T1 | epic E08 (Domain Model Migration) | M1]",type-task,area-data,phase-1,tier-next,ms-M1,
+Task,[E09-S1-T1] Persisted resumable state machine,Highest,13,"Objective:
+Resilient lifecycle
+
+Acceptance Criteria:
+persisted state; resume on crash; stages idempotent; stuck queryable
+
+Testing:
+kill/resume + idempotency
+
+Files:
+contexts/lifecycle/*; models/raw_event.py; migration
+
+Blocked by (link after import):
+E08-S3-T1
+
+[E09-S1-T1 | epic E09 (Lifecycle State-Machine Engine) | M1]",type-task,area-ingestion,phase-1,tier-next,ms-M1,
+Task,[E09-S2-T1] Queue lanes + DLQ,High,5,"Objective:
+Prevent head-of-line blocking
+
+Acceptance Criteria:
+render bursts dont block; poison->DLQ
+
+Testing:
+integration
+
+Files:
+platform/queue; workers/celery_app.py; workers/tasks/*
+
+Blocked by (link after import):
+E09-S1-T1
+
+[E09-S2-T1 | epic E09 (Lifecycle State-Machine Engine) | M1]",type-task,area-ingestion,area-infra,phase-1,tier-next,ms-M1
+Task,[E10-S1-T1] Pluggable adapter contract,High,5,"Objective:
+Add source by config
+
+Acceptance Criteria:
+new source=config+adapter; generic/static conform
+
+Testing:
+contract test
+
+Files:
+contexts/ingestion/adapters/*; adapters/base.py
+
+Blocked by (link after import):
+E09-S1-T1
+
+[E10-S1-T1 | epic E10 (Unified Ingestion & Structuring) | M1]",type-task,area-ingestion,phase-1,tier-next,ms-M1,
+Task,[E10-S2-T1] Validation stage,Highest,5,"Objective:
+Nothing invalid publishes
+
+Acceptance Criteria:
+non-events rejected; dead link blocks publish
+
+Testing:
+unit+integration
+
+Files:
+contexts/lifecycle/validate.py; normalizers/*
+
+Blocked by (link after import):
+E09-S1-T1
+
+[E10-S2-T1 | epic E10 (Unified Ingestion & Structuring) | M1]",type-task,area-ingestion,phase-1,tier-next,ms-M1,
+Task,[E11-S1-T1] Similarity + precision-first match,Highest,8,"Objective:
+Decide same event
+
+Acceptance Criteria:
+combined similarity; meets eval precision; series handled
+
+Testing:
+precision/recall gate in CI
+
+Files:
+contexts/event/dedup.py
+
+Blocked by (link after import):
+E08-S3-T1,E00-S4-T1
+
+[E11-S1-T1 | epic E11 (Canonicalization: Dedup/Merge/Split) | M1]",type-task,area-ingestion,area-ai,phase-1,tier-next,ms-M1
+Task,[E11-S2-T1] Merge + reversible split,Highest,8,"Objective:
+Preserve evidence
+
+Acceptance Criteria:
+merge keeps evidence+reason; split restores
+
+Testing:
+merge/split roundtrip
+
+Files:
+contexts/event/merge.py; models/source_observation.py
+
+Blocked by (link after import):
+E11-S1-T1
+
+[E11-S2-T1 | epic E11 (Canonicalization: Dedup/Merge/Split) | M1]",type-task,area-data,phase-1,tier-next,ms-M1,
+Task,[E11-S3-T1] Steward review surface,High,5,"Objective:
+Human decides ambiguous
+
+Acceptance Criteria:
+uncertain queue w/ reasoning+evidence; decision updates canonical
+
+Testing:
+api+e2e
+
+Files:
+routers/admin/*; web mission-control component
+
+Blocked by (link after import):
+E11-S1-T1
+
+[E11-S3-T1 | epic E11 (Canonicalization: Dedup/Merge/Split) | M1]",type-task,area-api,area-frontend,phase-1,tier-next,ms-M1
+Task,[E12-S1-T1] Model Gateway,High,8,"Objective:
+Contain model volatility
+
+Acceptance Criteria:
+one entry; cache; schema-constrained; fallback; batch
+
+Testing:
+unit mocked
+
+Files:
+platform/gateway/*; ai/*
+
+Blocked by (link after import):
+E03-S1-T1
+
+[E12-S1-T1 | epic E12 (AI Enrichment via Model Gateway) | M2]",type-task,area-ai,phase-1,tier-next,ms-M2,
+Task,[E12-S2-T1] Enrichment (category/tags/summary/embedding),High,5,"Objective:
+Auto-classify
+
+Acceptance Criteria:
+auto-classified; explainable
+
+Testing:
+unit mocked
+
+Files:
+contexts/enrichment/*; models/event.py
+
+Blocked by (link after import):
+E12-S1-T1
+
+[E12-S2-T1 | epic E12 (AI Enrichment via Model Gateway) | M2]",type-task,area-ai,phase-1,tier-next,ms-M2,
+Task,[E13-S1-T1] Trust scoring versioned + breakdown,Highest,8,"Objective:
+Transparent deterministic trust
+
+Acceptance Criteria:
+deterministic; policy_version; breakdown; explainable
+
+Testing:
+unit+determinism
+
+Files:
+contexts/trust/*; models/trust_score.py; migration
+
+Blocked by (link after import):
+E11-S2-T1,E12-S2-T1
+
+[E13-S1-T1 | epic E13 (Trust Score Engine) | M2]",type-task,area-trust,phase-1,tier-next,ms-M2,
+Task,[E13-S2-T1] Publish gate + Featured + config weights,Highest,5,"Objective:
+Gate & objective Featured
+
+Acceptance Criteria:
+below thr->moderation; Featured objective; weights tunable+versioned
+
+Testing:
+unit
+
+Files:
+contexts/trust/policy.py; contexts/lifecycle/publish.py
+
+Blocked by (link after import):
+E13-S1-T1
+
+[E13-S2-T1 | epic E13 (Trust Score Engine) | M2]",type-task,area-trust,phase-1,tier-next,ms-M2,
+Task,[E13-S2-T2] Trust as qualitative badges,High,3,"Objective:
+UX: badges not raw score
+
+Acceptance Criteria:
+badges shown; raw score internal
+
+Testing:
+component test
+
+Files:
+web EventCard; web event page; lib/api.ts
+
+Blocked by (link after import):
+E13-S1-T1
+
+[E13-S2-T2 | epic E13 (Trust Score Engine) | M2]",type-task,area-frontend,phase-1,tier-next,ms-M2,
+Task,[E14-S1-T1] Materialize search_document,High,5,"Objective:
+No runtime joins
+
+Acceptance Criteria:
+one row/published event; rebuilt on publish
+
+Testing:
+integration
+
+Files:
+contexts/search/projection.py; migration
+
+Blocked by (link after import):
+E13-S2-T1
+
+[E14-S1-T1 | epic E14 (Auto-Generated Surfaces/Projections) | M2]",type-task,area-api,area-search,phase-1,tier-next,ms-M2
+Task,[E14-S2-T1] Feeds as CDN objects + purge,High,5,"Objective:
+Replace feed stub
+
+Acceptance Criteria:
+static feeds; update within TTL; keys purged
+
+Testing:
+integration
+
+Files:
+workers/tasks/feeds.py; routers/feeds.py; platform/cache/*
+
+Blocked by (link after import):
+E14-S1-T1
+
+[E14-S2-T1 | epic E14 (Auto-Generated Surfaces/Projections) | M2]",type-task,area-api,phase-1,tier-next,ms-M2,
+Task,[E14-S3-T1] Surfaces generated from canonical,High,3,"Objective:
+No hand-authored surfaces
+
+Acceptance Criteria:
+all surfaces from canonical; revalidate; register out
+
+Testing:
+e2e
+
+Files:
+web events/*; web calendar; components/*
+
+Blocked by (link after import):
+E14-S1-T1
+
+[E14-S3-T1 | epic E14 (Auto-Generated Surfaces/Projections) | M2]",type-task,area-frontend,phase-1,tier-next,ms-M2,
+Story,[E15-S1] FTS + filters on projection,High,5,[E15-S1 | epic E15 (Search-First) | M3],type-story,area-search,phase-2,tier-later,ms-M3,
+Story,[E15-S2] Ranking relevance x trust x freshness,High,5,[E15-S2 | epic E15 (Search-First) | M3],type-story,area-search,phase-2,tier-later,ms-M3,
+Story,[E15-S3] Fix indexed search (ILIKE OR-branch),High,2,[E15-S3 | epic E15 (Search-First) | M3],type-story,area-search,phase-2,tier-later,ms-M3,
+Story,[E15-S4] Search health metrics,Medium,3,[E15-S4 | epic E15 (Search-First) | M3],type-story,area-observability,phase-2,tier-later,ms-M3,
+Story,[E16-S1] Organizer & Venue entities + backfill,High,5,[E16-S1 | epic E16 (Organizer Identity & Reputation) | M4],type-story,area-data,phase-2,tier-later,ms-M4,
+Story,[E16-S2] Auto organizer profiles,High,5,[E16-S2 | epic E16 (Organizer Identity & Reputation) | M4],type-story,area-api,phase-2,tier-later,ms-M4,
+Story,[E16-S3] Organizer claim & verify,High,5,[E16-S3 | epic E16 (Organizer Identity & Reputation) | M4],type-story,area-api,phase-2,tier-later,ms-M4,
+Story,[E16-S4] Reputation v1 (blocked by E00-S2),High,8,[E16-S4 | epic E16 (Organizer Identity & Reputation) | M4],type-story,area-trust,phase-2,tier-later,ms-M4,
+Story,[E17-S1] RBAC roles + refresh tokens,High,5,"[E17-S1 | epic E17 (RBAC, Steward Audit & Access) | M4]",type-story,area-security,phase-2,tier-later,ms-M4,
+Story,[E17-S2] Steward audit log + 2FA + policy approval,High,8,"[E17-S2 | epic E17 (RBAC, Steward Audit & Access) | M4]",type-story,area-security,phase-2,tier-later,ms-M4,
+Story,[E18-S1] Embeddings + pgvector HNSW,Medium,5,[E18-S1 | epic E18 (Semantic/NL Search) | M5],type-story,area-search,area-ai,phase-3,tier-later,ms-M5
+Story,[E18-S2] Hybrid search RRF + rerank,Medium,8,[E18-S2 | epic E18 (Semantic/NL Search) | M5],type-story,area-search,phase-3,tier-later,ms-M5,
+Story,[E18-S3] NL query understanding,Medium,5,[E18-S3 | epic E18 (Semantic/NL Search) | M5],type-story,area-ai,phase-3,tier-later,ms-M5,
+Story,[E19-S1] Subscriptions,Medium,5,[E19-S1 | epic E19 (Proactive Discovery) | M5],type-story,area-api,phase-3,tier-later,ms-M5,
+Story,[E19-S2] Weekly digest (opt-in/unsub),Medium,8,[E19-S2 | epic E19 (Proactive Discovery) | M5],type-story,area-api,phase-3,tier-later,ms-M5,
+Story,[E19-S3] Notifications,Medium,5,[E19-S3 | epic E19 (Proactive Discovery) | M5],type-story,area-api,phase-3,tier-later,ms-M5,
+Story,[E20-S1] Interaction capture (append-only),Medium,5,[E20-S1 | epic E20 (Analytics Engine) | M5],type-story,area-data,phase-3,tier-later,ms-M5,
+Story,[E20-S2] Organizer analytics,Medium,8,[E20-S2 | epic E20 (Analytics Engine) | M5],type-story,area-api,phase-3,tier-later,ms-M5,
+Story,[E20-S3] Attendee analytics/recos,Medium,8,[E20-S3 | epic E20 (Analytics Engine) | M5],type-story,area-ai,phase-3,tier-later,ms-M5,
+Story,[E21-S1] Public API + keys/quotas,Medium,8,[E21-S1 | epic E21 (Ecosystem Platform) | M6],type-story,area-api,phase-4,tier-later,ms-M6,
+Story,[E21-S2] Conversational assistant,Medium,13,[E21-S2 | epic E21 (Ecosystem Platform) | M6],type-story,area-ai,phase-4,tier-later,ms-M6,
+Story,[E21-S3] Sponsor dashboards (data-license gated),Medium,8,[E21-S3 | epic E21 (Ecosystem Platform) | M6],type-story,area-api,phase-4,tier-later,ms-M6,
+Story,[E21-S4] City ecosystem reports,Medium,5,[E21-S4 | epic E21 (Ecosystem Platform) | M6],type-story,area-api,phase-4,tier-later,ms-M6,
+Story,[E22-S1] Per-city isolation + 2nd-city proof,Medium,13,[E22-S1 | epic E22 () | M6],type-story,area-data,phase-4,tier-later,ms-M6,
+Epic,[E23] Multi-Tenancy,Highest,,"Epic. Phase 1, Milestone M1.
+
+Depends on: E08",type-epic,platform,phase-1,tier-next,ms-M1,
+Epic,[E24] Instance Configuration,Highest,,"Epic. Phase 1, Milestone M2.
+
+Depends on: E23",type-epic,platform,phase-1,tier-next,ms-M2,
+Epic,[E25] Plugin System,High,,"Epic. Phase 2, Milestone M4.
+
+Depends on: E10,E12,E24",type-epic,platform,phase-2,tier-later,ms-M4,
+Epic,[E26] Open-Source Readiness,High,,"Epic. Phase 2, Milestone M4.
+
+Depends on: E24",type-epic,platform,phase-2,tier-later,ms-M4,
+Task,[E23-S1-T1] Generalize migration City->Tenant,Highest,8,"Objective:
+tenant+instance_config tables; tenant_id all tables; (tenant_id,...) unique
+
+Acceptance Criteria:
+every table tenant-scoped; Lucknow backfilled
+
+Testing:
+migration up/down; backfill
+
+Files:
+core/domain/tenant; all models; migration
+
+Blocked by (link after import):
+E08
+
+[E23-S1-T1 | epic E23 (Multi-Tenancy) | M1]",type-task,area-data,platform,phase-1,tier-next,ms-M1
+Task,[E23-S2-T1] Tenant-resolution middleware,Highest,5,"Objective:
+domain->context; fixed-in-config single-tenant
+
+Acceptance Criteria:
+correct tenant/request; 404 unknown; single-tenant ignores Host
+
+Testing:
+resolution tests
+
+Files:
+core/tenancy/*; api/main.py
+
+Blocked by (link after import):
+E23-S1-T1
+
+[E23-S2-T1 | epic E23 (Multi-Tenancy) | M1]",type-task,area-api,platform,phase-1,tier-next,ms-M1
+Task,[E23-S3-T1] RLS policies + worker tenant-context,Highest,5,"Objective:
+DB-enforced isolation; jobs carry tenant
+
+Acceptance Criteria:
+isolation at DB; jobs set context
+
+Testing:
+integration
+
+Files:
+migration; workers/*
+
+Blocked by (link after import):
+E23-S1-T1
+
+[E23-S3-T1 | epic E23 (Multi-Tenancy) | M1]",type-task,area-security,platform,phase-1,tier-next,ms-M1
+Task,[E23-S4-T1] Tenant-isolation test suite + policy detector,Highest,3,"Objective:
+cross-tenant read impossible; missing-policy fails
+
+Acceptance Criteria:
+A cannot read B; test fails if table lacks policy
+
+Testing:
+CI-gating security tests
+
+Files:
+tests/isolation/*
+
+Blocked by (link after import):
+E23-S3-T1
+
+[E23-S4-T1 | epic E23 (Multi-Tenancy) | M1]",type-test,area-security,platform,phase-1,tier-next,ms-M1
+Task,[E24-S1-T1] Config schema + validated loader,Highest,8,"Objective:
+defaults->config->secrets; fail loud
+
+Acceptance Criteria:
+invalid config fails; secrets by ref
+
+Testing:
+schema validation tests
+
+Files:
+core/config/*
+
+Blocked by (link after import):
+E23-S1-T1
+
+[E24-S1-T1 | epic E24 (Instance Configuration) | M2]",type-task,area-infra,platform,phase-1,tier-next,ms-M2
+Task,[E24-S2-T1] Remove hard-coded Lucknow assumptions,Highest,8,"Objective:
+city defaults, prompt lists, timezone -> config
+
+Acceptance Criteria:
+config-over-code CI gate passes; no tenant literal in logic
+
+Testing:
+gate test + unit
+
+Files:
+ingestion/relevance.py; ai prompts; models
+
+Blocked by (link after import):
+E24-S1-T1
+
+[E24-S2-T1 | epic E24 (Instance Configuration) | M2]",type-refactor,area-ingestion,platform,phase-1,tier-next,ms-M2
+Task,[E24-S3-T1] Themeable frontend from config,High,5,"Objective:
+branding/theme/locale/SEO; light-mode
+
+Acceptance Criteria:
+branding/theme/language config-driven
+
+Testing:
+component tests
+
+Files:
+apps/web/*
+
+Blocked by (link after import):
+E24-S1-T1
+
+[E24-S3-T1 | epic E24 (Instance Configuration) | M2]",type-task,area-frontend,platform,phase-1,tier-next,ms-M2
+Story,[E25-S1] Define ports + registry,High,8,"Blocked by (link after import):
+E24-S1-T1
+
+[E25-S1 | epic E25 (Plugin System) | M4]",type-story,area-infra,platform,phase-2,tier-later,ms-M4
+Story,[E25-S2] Plugin SDK + conformance harness,High,8,"Blocked by (link after import):
+E25-S1
+
+[E25-S2 | epic E25 (Plugin System) | M4]",type-story,area-test,platform,phase-2,tier-later,ms-M4
+Story,[E25-S3] Refactor providers behind ports,High,8,"Blocked by (link after import):
+E25-S1
+
+[E25-S3 | epic E25 (Plugin System) | M4]",type-story,area-infra,platform,phase-2,tier-later,ms-M4
+Story,[E25-S4] Second implementations (on demand),Medium,5,"Blocked by (link after import):
+E25-S3
+
+[E25-S4 | epic E25 (Plugin System) | M4]",type-story,area-ai,platform,phase-2,tier-later,ms-M4
+Story,[E26-S1] One-command deploy + _example,High,5,"Blocked by (link after import):
+E24-S1-T1
+
+[E26-S1 | epic E26 (Open-Source Readiness) | M4]",type-story,area-infra,platform,phase-2,tier-later,ms-M4
+Story,[E26-S2] Docs site + quickstart,High,5,[E26-S2 | epic E26 (Open-Source Readiness) | M4],type-story,area-docs,platform,phase-2,tier-later,ms-M4
+Story,[E26-S3] Versioning core + plugin-API,High,3,"Blocked by (link after import):
+E25-S1
+
+[E26-S3 | epic E26 (Open-Source Readiness) | M4]",type-story,area-infra,platform,phase-2,tier-later,ms-M4
+Story,[E26-S4] Contribution workflow + config-over-code CI gate,High,3,"Blocked by (link after import):
+E24-S2-T1
+
+[E26-S4 | epic E26 (Open-Source Readiness) | M4]",type-story,area-infra,platform,phase-2,tier-later,ms-M4
+Story,[E23-S5] 2nd-city federation proof (folded from former E22),Medium,13,"Objective:
+Prove a second tenant/city runs from config alone.
+
+Acceptance Criteria:
+Second city launches with no code change.
+
+Testing:
+isolation + provisioning tests
+
+Files:
+deployments/<city>/
+
+Blocked by (link after import):
+E23-S1-T1
+
+[E23-S5 | epic E23 (Multi-Tenancy) | M6]",type-story,area-data,platform,phase-4,tier-later,ms-M6
