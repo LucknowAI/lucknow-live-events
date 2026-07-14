@@ -70,6 +70,14 @@ async def run_source_pipeline(source_id: str) -> dict[str, int]:
             log.error("pipeline.source_not_found", source_id=source_id)
             return {"error": "source_not_found"}
 
+        log.info(
+            "pipeline.started",
+            source_id=source_id,
+            platform=source.platform,
+            source_name=source.name,
+            base_url=source.base_url,
+        )
+
         crawl_run = CrawlRun(
             id=str(uuid.uuid4()),
             source_id=source_id,
@@ -99,6 +107,13 @@ async def run_source_pipeline(source_id: str) -> dict[str, int]:
                 source.consecutive_failures = 0
             await db.commit()
 
+        log.info(
+            "pipeline.completed",
+            source_id=source_id,
+            platform=source.platform,
+            status=crawl_run.status,
+            **counts,
+        )
         return counts
 
 
@@ -323,12 +338,18 @@ async def _process_raw_event(
         await db.commit()
         if updated:
             try:
+                from workers.dispatch import enqueue
                 from workers.tasks.feeds import rebuild_all_feeds
 
-                rebuild_all_feeds.delay()
+                enqueue(rebuild_all_feeds)
             except Exception:
                 pass
-        log.debug("pipeline.duplicate_refresh", title=parsed.get("title"), updated=updated)
+        log.debug(
+            "pipeline.duplicate_skipped",
+            title=parsed.get("title"),
+            canonical_url=parsed.get("canonical_url"),
+            updated=updated,
+        )
         return {"updated": 1} if updated else {}
 
     dedup_certainty = 1.0
@@ -352,8 +373,10 @@ async def _process_raw_event(
         await db.commit()
         # ── Step 9: enqueue feed rebuild ─────────────────────────────
         try:
+            from workers.dispatch import enqueue
             from workers.tasks.feeds import rebuild_all_feeds
-            rebuild_all_feeds.delay()
+
+            enqueue(rebuild_all_feeds)
         except Exception:
             pass
         return {"new": 1, "published": 1}
@@ -681,6 +704,17 @@ async def _publish_event(
     )
     db.add(event)
     await db.flush()
+    log.info(
+        "event.published",
+        event_id=str(event.id),
+        slug=slug,
+        title=title,
+        date_tba=is_date_tba,
+        publish_score=publish_score,
+        source_id=str(source.id),
+        platform=source.platform,
+        canonical_url=parsed["canonical_url"],
+    )
     return event
 
 

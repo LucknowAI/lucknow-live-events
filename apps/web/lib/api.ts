@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 const DEFAULT_API_URL = "http://localhost:8000/api/v1";
 
 function resolveBaseUrl(): string {
@@ -16,9 +18,9 @@ function resolveBaseUrl(): string {
     DEFAULT_API_URL;
 
   if (url === DEFAULT_API_URL) {
-    console.warn(
-      "[api] Neither INTERNAL_API_URL nor NEXT_PUBLIC_API_URL is set. " +
-        "Falling back to localhost — this will fail in production."
+    logger.warn(
+      { fallback: DEFAULT_API_URL },
+      "Neither INTERNAL_API_URL nor NEXT_PUBLIC_API_URL is set; falling back to localhost",
     );
   }
 

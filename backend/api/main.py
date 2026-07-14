@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import structlog
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from api.core.config import settings
 from api.core.limiter import limiter
+from api.core.logging import get_logger, setup_logging
+from api.middleware.request_logging import RequestLoggingMiddleware
 from api.routers import router as api_v1_router
 
 # Ensure the Celery app is initialized so that @shared_task decorators
@@ -22,28 +24,28 @@ try:
 except Exception:  # pragma: no cover
     pass
 
+setup_logging(service_name="api")
+log = get_logger(__name__)
 
-def configure_logging() -> None:
-    structlog.configure(
-        processors=[
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.add_log_level,
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
-            structlog.processors.JSONRenderer(),
-        ]
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log.info(
+        "api.startup",
+        environment=settings.ENVIRONMENT,
+        debug=settings.DEBUG,
+        log_level=settings.LOG_LEVEL,
     )
+    yield
+    log.info("api.shutdown")
 
 
-configure_logging()
-log = structlog.get_logger(__name__)
-
-
-app = FastAPI(title="Lucknow Tech Events API", debug=settings.DEBUG)
+app = FastAPI(title="Lucknow Tech Events API", debug=settings.DEBUG, lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

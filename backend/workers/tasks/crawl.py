@@ -50,9 +50,10 @@ def crawl_all_sources() -> dict:
     log.info("crawl_all_sources.dispatching", count=len(source_ids))
 
     from workers.tasks.pipeline import run_pipeline_for_source
+    from workers.dispatch import enqueue
 
     for sid in source_ids:
-        run_pipeline_for_source.delay(sid)
+        enqueue(run_pipeline_for_source, sid)
 
     return {"ok": True, "dispatched": len(source_ids)}
 

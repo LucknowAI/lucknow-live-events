@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000"
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"  # json | console
+    SERVICE_NAME: str = "api"
+    ENVIRONMENT: str = "development"  # development | staging | production
 
 
 settings = Settings()

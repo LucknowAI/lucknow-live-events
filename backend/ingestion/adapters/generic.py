@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 from typing import Any
 
+from api.core.logging import get_logger
 from ingestion.adapters.base import BaseAdapter, ScrapedPage
 from ingestion.adapters.playwright_util import playwright_render
 from ingestion.normalizers.text import MAX_EXTRACTION_CHARS, clean_text, ensure_absolute_url, strip_tracking_params
+
+log = get_logger(__name__)
 
 
 class GenericAdapter(BaseAdapter):
@@ -23,7 +27,29 @@ class GenericAdapter(BaseAdapter):
         if not url:
             raise ValueError("Generic source has no base_url")
 
-        html = await playwright_render(url)
+        log.info("adapter.fetch_started", platform=self.platform, url=url)
+        start = time.perf_counter()
+        try:
+            html = await playwright_render(url)
+        except Exception as exc:
+            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            log.error(
+                "adapter.fetch_failed",
+                platform=self.platform,
+                url=url,
+                duration_ms=duration_ms,
+                error=str(exc),
+            )
+            raise
+
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        log.info(
+            "adapter.fetch_completed",
+            platform=self.platform,
+            url=url,
+            duration_ms=duration_ms,
+            html_bytes=len(html.encode()) if html else 0,
+        )
         return [
             ScrapedPage(
                 url=url,

@@ -22,7 +22,9 @@ Admin = Annotated[dict, Depends(get_current_admin)]
 async def run_discovery(admin: Admin):
     """Trigger the full AI-powered event discovery agent (uses default search queries)."""
     from workers.tasks.discovery import auto_discover_events
-    task = auto_discover_events.delay()
+    from workers.dispatch import enqueue
+
+    task = enqueue(auto_discover_events)
     return DiscoveryRunResult(task_id=task.id, message="Discovery agent queued with default queries")
 
 
@@ -30,7 +32,9 @@ async def run_discovery(admin: Admin):
 async def run_custom_discovery(payload: DiscoveryRunRequest, admin: Admin):
     """Trigger discovery with admin-supplied custom search queries."""
     from workers.tasks.discovery import auto_discover_events
-    task = auto_discover_events.delay(custom_queries=payload.custom_queries)
+    from workers.dispatch import enqueue
+
+    task = enqueue(auto_discover_events, custom_queries=payload.custom_queries)
     return DiscoveryRunResult(
         task_id=task.id,
         message=f"Discovery agent queued with {len(payload.custom_queries or [])} custom queries",

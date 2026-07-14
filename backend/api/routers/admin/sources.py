@@ -64,14 +64,18 @@ async def trigger_crawl(source_id: str, admin: Admin, db: AsyncSession = Depends
     if src is None:
         raise HTTPException(status_code=404, detail="Source not found")
     from workers.tasks.pipeline import run_pipeline_for_source
-    task = run_pipeline_for_source.delay(source_id)
+    from workers.dispatch import enqueue
+
+    task = enqueue(run_pipeline_for_source, source_id)
     return {"task_id": task.id, "source_id": source_id}
 
 
 @router.post("/crawl/run-all", status_code=202)
 async def trigger_all_crawls(admin: Admin):
     from workers.tasks.crawl import crawl_all_sources
-    task = crawl_all_sources.delay()
+    from workers.dispatch import enqueue
+
+    task = enqueue(crawl_all_sources)
     return {"task_id": task.id}
 
 

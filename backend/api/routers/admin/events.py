@@ -66,7 +66,9 @@ async def rescrape_event(
         raise HTTPException(status_code=404, detail="Event not found")
 
     from workers.tasks.crawl import rescrape_single_event
-    task = rescrape_single_event.delay(event_id)
+    from workers.dispatch import enqueue
+
+    task = enqueue(rescrape_single_event, event_id)
     return {"task_id": task.id, "event_id": event_id, "url": ev.canonical_url}
 
 
@@ -81,7 +83,9 @@ async def fix_bad_dates(
     """
     _, count = await admin_service.get_bad_date_events(db)
     from workers.tasks.crawl import rescrape_bad_dates
-    task = rescrape_bad_dates.delay()
+    from workers.dispatch import enqueue
+
+    task = enqueue(rescrape_bad_dates)
     return {
         "task_id": task.id,
         "events_queued": count,
@@ -93,7 +97,9 @@ async def fix_bad_dates(
 async def expire_now(admin: Admin):
     """Manually trigger the expiry cleanup task (runs all 3 passes: end_at, stale start_at, delete 2099)."""
     from workers.tasks.crawl import expire_past_events
-    task = expire_past_events.delay()
+    from workers.dispatch import enqueue
+
+    task = enqueue(expire_past_events)
     return {"task_id": task.id, "message": "Expiry cleanup queued"}
 
 

@@ -24,6 +24,8 @@ services:
     env_file: ../.env
     environment:
       - DOCKER_ENV=1
+      - SERVICE_NAME=api
+      - LOG_FORMAT=console
     depends_on: [postgres, redis]
 
   worker:
@@ -37,6 +39,8 @@ services:
     environment:
       - PYTHONPATH=/app
       - DOCKER_ENV=1
+      - SERVICE_NAME=worker
+      - LOG_FORMAT=console
     depends_on: [redis, postgres]
 
   beat:

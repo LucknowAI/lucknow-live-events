@@ -2,6 +2,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { eventService, Event } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
+import { logError } from "@/lib/logger";
 
 export const revalidate = 60; // SSR with 60s cache
 
@@ -13,19 +14,19 @@ export default async function HomePage() {
   try {
     featuredEvents = await eventService.getFeatured();
   } catch (e) {
-    console.error("Failed to fetch featured events:", e);
+    logError(e, "Failed to fetch featured events");
   }
 
   try {
     thisWeekEvents = await eventService.getThisWeek();
   } catch (e) {
-    console.error("Failed to fetch this week events:", e);
+    logError(e, "Failed to fetch this week events");
   }
 
   try {
     studentEvents = await eventService.getStudentFriendly();
   } catch (e) {
-    console.error("Failed to fetch student-friendly events:", e);
+    logError(e, "Failed to fetch student-friendly events");
   }
 
   return (

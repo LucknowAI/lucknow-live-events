@@ -90,9 +90,10 @@ def refresh_watchlist_sources() -> dict[str, Any]:
         return {"ok": True, "refreshed": 0, "disabled": 0}
 
     from workers.tasks.pipeline import run_pipeline_for_source
+    from workers.dispatch import enqueue
 
     for sid in source_ids:
-        run_pipeline_for_source.delay(sid)
+        enqueue(run_pipeline_for_source, sid)
 
     log.info("watchlist.refresh.dispatched", refreshed=len(source_ids), disabled=disabled)
     return {"ok": True, "refreshed": len(source_ids), "disabled": disabled}

@@ -1,4 +1,5 @@
 import { eventService, type Event } from "@/lib/api";
+import { logError } from "@/lib/logger";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import Link from "next/link";
 import { ComingSoonButton } from "@/components/ComingSoonButton";
@@ -63,7 +64,7 @@ export default async function CalendarPage() {
     // Sort by start date ascending
     events.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
   } catch (e) {
-    console.error("Failed to fetch calendar events:", e);
+    logError(e, "Failed to fetch calendar events");
   }
 
   const grouped = groupByDate(events);

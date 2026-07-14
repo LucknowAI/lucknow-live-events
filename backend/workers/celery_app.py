@@ -4,6 +4,8 @@ from celery import Celery
 
 from api.core.config import settings
 
+# Register Celery logging signal handlers (worker startup + task lifecycle).
+import workers.logging_hooks  # noqa: F401
 
 celery_app = Celery("lucknow_events")
 celery_app.conf.update(

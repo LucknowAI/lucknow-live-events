@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { eventService } from '@/lib/api'
+import { logError } from '@/lib/logger'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
@@ -15,7 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }))
   } catch (e) {
-    console.error('Failed to generate event sitemaps', e)
+    logError(e, 'Failed to generate event sitemaps')
   }
 
   const staticRoutes: MetadataRoute.Sitemap = [

@@ -180,7 +180,18 @@ uploads/
 tmp/
 temp/
 
-
+# ==============================================================================
+# Documentation
+# ==============================================================================
+# Ignore all markdown files by default
+*.md
 
 # Whitelist specific markdown files
 !README.md
+
+# ==============================================================================
+# Agents & Tools Docs
+docs/design/**
+docs/adr/**
+docs/readiness/**
+skills-lock.json

@@ -1,15 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { usePathname } from "next/navigation";
+import { logError, logger } from "@/lib/logger";
 
 export function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   // Default to open on larger screens, closed on mobile initially
   const [isOpen, setIsOpen] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Keep Render free-tier backend alive by pinging /health every 30 seconds
+  useEffect(() => {
+    const PING_INTERVAL_MS = 30 * 1000; // 30 seconds
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+    if (!apiUrl) {
+      logger.warn({ reason: "NEXT_PUBLIC_API_URL unset" }, "keep_alive.skipped");
+      return;
+    }
+
+    const ping = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 s timeout
+        const res = await fetch(`${apiUrl}/health`, {
+          method: "GET",
+          keepalive: true,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        logger.debug({ status: res.status }, "keep_alive.ping_ok");
+      } catch (err) {
+        logError(err, "keep_alive.ping_failed");
+      }
+    };
+
+    // Fire immediately on mount, then on interval
+    ping();
+    keepAliveRef.current = setInterval(ping, PING_INTERVAL_MS);
+
+    return () => {
+      if (keepAliveRef.current !== null) clearInterval(keepAliveRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);

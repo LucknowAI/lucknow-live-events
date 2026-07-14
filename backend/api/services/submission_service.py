@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.core.logging import get_logger
 from api.models.submission import ManualSubmission
+from workers.dispatch import enqueue
+
+log = get_logger(__name__)
 
 
 async def create_submission(
@@ -22,22 +26,33 @@ async def create_submission(
     db.add(submission)
     await db.flush()
 
-    # Immediately process the URL via the ingestion pipeline.
-    # The task will mark the submission accepted/skipped/needs_review.
     submission.status = "queued"
     await db.commit()
     await db.refresh(submission)
 
-    try:
-        from workers.celery_app import celery_app
+    log.info(
+        "submission.created",
+        submission_id=str(submission.id),
+        event_url=event_url,
+        submitter_name=submitter_name,
+    )
 
-        celery_app.send_task(
-            "workers.tasks.submissions.process_manual_submission",
-            args=[str(submission.id), event_url],
+    try:
+        from workers.tasks.submissions import process_manual_submission
+
+        task = enqueue(process_manual_submission, str(submission.id), event_url)
+        log.info(
+            "submission.task_queued",
+            submission_id=str(submission.id),
+            task_id=task.id,
+            event_url=event_url,
         )
-    except Exception:
-        # If celery isn't running, keep it queued so it can be retried later.
-        pass
+    except Exception as exc:
+        log.warning(
+            "submission.task_queue_failed",
+            submission_id=str(submission.id),
+            event_url=event_url,
+            error=str(exc),
+        )
 
     return submission
-
