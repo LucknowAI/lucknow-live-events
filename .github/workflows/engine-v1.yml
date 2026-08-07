@@ -1,0 +1,91 @@
+# CI for the V1 ingestion engine (backend/v1).
+#
+# The import-linter contracts in backend/.importlinter are the only thing keeping the module
+# boundaries real. Until this workflow existed they were discipline, not enforcement — a
+# reviewer had to notice. Now a boundary violation fails the build.
+#
+# Scoped to backend/v1 and backend/tests/v1 deliberately: the V0 pipeline predates this
+# toolchain and does not currently pass `ruff check` with the pinned version, so linting it
+# here would produce a red build nobody can fix in this PR. Widening the scope is its own
+# task, not a side effect of adding CI.
+#
+# Nothing here touches the network or a real provider: the suite runs entirely on the
+# `fixture` and `mock` adapters. There are no secrets in this workflow, and there must not be.
+
+name: engine-v1
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/v1/**"
+      - "backend/tests/v1/**"
+      - "backend/.importlinter"
+      - "backend/pyproject.toml"
+      - ".github/workflows/engine-v1.yml"
+  pull_request:
+    paths:
+      - "backend/v1/**"
+      - "backend/tests/v1/**"
+      - "backend/.importlinter"
+      - "backend/pyproject.toml"
+      - ".github/workflows/engine-v1.yml"
+
+concurrency:
+  group: engine-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Belt and braces: even if a fixture leaked a paid profile into a test, the engine
+      # refuses to spend without this set.
+      V1_LLM_ALLOW_LIVE: ""
+      V1_ENVIRONMENT: development
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check v1 tests/v1
+
+      - name: Format check
+        run: ruff format --check v1 tests/v1
+
+      - name: Module boundaries
+        run: lint-imports --config .importlinter
+
+      - name: Tests
+        run: pytest tests/v1 -q
+
+      - name: No tenant-specific values in code
+        # instance.yaml is the only place a city name may appear (ADR-013).
+        run: |
+          if grep -rniE 'lucknow' v1 --include='*.py'; then
+            echo "::error::tenant-specific value found in v1 Python source; it belongs in instance.yaml"
+            exit 1
+          fi
+
+      - name: Engine boots with no keys and no database
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from v1.api.app import app
+          with TestClient(app) as c:
+              body = c.get("/health").json()
+              assert body["status"] == "ok", body
+              assert body["profiles_available"] >= 1, body
+              print("boot ok:", body)
+          PY

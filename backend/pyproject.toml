@@ -27,6 +27,19 @@ dependencies = [
   "python-dateutil>=2.9",
   "pytz>=2024.1",
   "google-genai>=1.0.0",
+  # --- Engine V1 (backend/v1) ---
+  "pyyaml>=6.0",          # instance config files
+  "openai>=1.60",         # the openai_compatible adapter: Groq, OpenRouter, LM Studio, vLLM
+  "tenacity>=8.5",        # jittered backoff for provider transport retries
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "respx>=0.21",          # HTTP mocking for adapter tests
+  "import-linter>=2.0",   # enforces the v1 module-boundary contracts
+  "ruff>=0.6",
 ]
 
 [tool.ruff]
@@ -38,7 +51,11 @@ quote-style = "double"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+  "live: hits a real provider and may cost money; deselected unless V1_LLM_ALLOW_LIVE=1",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["ai*", "api*", "workers*", "ingestion*"]
+include = ["ai*", "api*", "workers*", "ingestion*", "v1*"]

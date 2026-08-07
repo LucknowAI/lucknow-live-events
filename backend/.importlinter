@@ -1,0 +1,89 @@
+; Module-boundary contracts for the V1 engine.
+;
+;   cd backend && lint-imports --config .importlinter
+;
+; These are the rule that makes "modular" mechanical instead of aspirational. A module may
+; import contracts, ports, platform and its own folder — never a sibling module, never a
+; concrete provider. Only api/ and pipeline/ know the module order.
+;
+; Run in CI. A violation is a failed build, not a review comment somebody might miss.
+
+[importlinter]
+root_packages =
+    v1
+include_external_packages = True
+
+[importlinter:contract:v1-layers]
+name = V1 layers are strictly ordered (top may import bottom, never the reverse)
+type = layers
+; Every subpackage is listed. Omitting one (`config` and `models` were, originally) leaves it
+; unconstrained, which is how `platform` and `config` ended up importing each other at package
+; level without anything complaining.
+layers =
+    api
+    providers
+    platform
+    config
+    models
+    ports
+    contracts
+containers =
+    v1
+
+[importlinter:contract:contracts-are-leaves]
+name = contracts/ depends on nothing of ours
+type = forbidden
+source_modules =
+    v1.contracts
+forbidden_modules =
+    v1.api
+    v1.config
+    v1.models
+    v1.platform
+    v1.ports
+    v1.providers
+
+[importlinter:contract:ports-are-interfaces-only]
+name = ports/ imports contracts only — no vendor SDKs, no platform, no providers
+type = forbidden
+source_modules =
+    v1.ports
+forbidden_modules =
+    v1.api
+    v1.config
+    v1.models
+    v1.platform
+    v1.providers
+    google
+    openai
+    httpx
+    sqlalchemy
+    fastapi
+
+[importlinter:contract:v1-does-not-touch-v0]
+name = The V1 engine never imports the V0 pipeline
+type = forbidden
+source_modules =
+    v1
+forbidden_modules =
+    api
+    ai
+    ingestion
+    workers
+
+[importlinter:contract:no-vendor-sdk-outside-providers]
+name = Vendor LLM SDKs are confined to providers/
+type = forbidden
+; Direct imports only. api/ is *supposed* to reach providers/ (that is the layering), and
+; providers/ is where the SDKs live — so a transitive path through them is correct, while a
+; direct `import openai` in a router is the mistake this contract catches.
+allow_indirect_imports = True
+source_modules =
+    v1.contracts
+    v1.ports
+    v1.config
+    v1.models
+    v1.api
+forbidden_modules =
+    google
+    openai
