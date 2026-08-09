@@ -47,8 +47,6 @@ class SerpCache(Protocol):
 
     async def put(self, key: str, response: SearchResponse) -> None: ...
 
-    async def purge_expired(self) -> int: ...
-
 
 @dataclass(slots=True)
 class _Entry:
@@ -80,17 +78,6 @@ class InMemorySerpCache:
             # whose only job is stopping unbounded growth in a long-lived process.
             self._entries.pop(next(iter(self._entries)), None)
         self._entries[key] = _Entry(response=response, expires_at=time.monotonic() + self._ttl_s)
-
-    async def purge_expired(self) -> int:
-        now = time.monotonic()
-        expired = [key for key, entry in self._entries.items() if entry.expires_at <= now]
-        for key in expired:
-            self._entries.pop(key, None)
-        return len(expired)
-
-    @property
-    def size(self) -> int:
-        return len(self._entries)
 
 
 class PostgresSerpCache:
@@ -161,6 +148,9 @@ class PostgresSerpCache:
             logger.exception("serp_cache_write_failed", cache_key=key)
 
     async def purge_expired(self) -> int:
+        """Delete rows past their TTL. Not on `SerpCache` — the memory and null backends
+        have nothing to purge. Nothing calls this yet; Phase 8's scheduler is what wires
+        it to a cron. Until then expired rows are ignored by `get` but not reclaimed."""
         from v1.models import SerpCacheEntry
         from v1.platform.db import session_scope
 
@@ -186,6 +176,3 @@ class NullSerpCache:
 
     async def put(self, key: str, response: SearchResponse) -> None:
         return None
-
-    async def purge_expired(self) -> int:
-        return 0

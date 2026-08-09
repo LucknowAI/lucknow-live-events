@@ -73,6 +73,22 @@ class SpendRecord:
     at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
+class _AnySpendLedger[Entry](Protocol):
+    """What `_WindowedGuard` needs of a ledger, whichever kind of spend it holds.
+
+    Structural, so `SpendLedger` and `SearchSpendLedger` below stay the names the rest of
+    the engine is typed against — this exists only so the shared accounting can be written
+    once instead of once per kind.
+    """
+
+    async def record(self, entry: Entry) -> None: ...
+
+    async def spend_since(self, since: datetime) -> Decimal: ...
+
+    @property
+    def unrecorded_usd(self) -> Decimal: ...
+
+
 class SpendLedger(Protocol):
     async def record(self, entry: SpendRecord) -> None:
         """Append one call. Must not raise for a recoverable storage problem — losing a
@@ -98,7 +114,7 @@ class SpendLedger(Protocol):
         ...
 
 
-class InMemorySpendLedger:
+class _InMemoryLedger[Entry: (SpendRecord, SearchSpendRecord)]:
     """Process-local ledger. Zero setup, resets on restart.
 
     Correct for dev and CI, and honest about its limitation: the app refuses to start with
@@ -107,9 +123,9 @@ class InMemorySpendLedger:
     """
 
     def __init__(self) -> None:
-        self._entries: list[SpendRecord] = []
+        self._entries: list[Entry] = []
 
-    async def record(self, entry: SpendRecord) -> None:
+    async def record(self, entry: Entry) -> None:
         self._entries.append(entry)
 
     async def spend_since(self, since: datetime) -> Decimal:
@@ -121,9 +137,13 @@ class InMemorySpendLedger:
         return Decimal(0)
 
     @property
-    def entries(self) -> list[SpendRecord]:
+    def entries(self) -> list[Entry]:
         """Read-only view for tests and `/llm/profiles`."""
         return list(self._entries)
+
+
+class InMemorySpendLedger(_InMemoryLedger[SpendRecord]):
+    """LLM spend, in process."""
 
 
 class PostgresSpendLedger:
@@ -215,38 +235,43 @@ class BudgetStatus:
         return max(self.cap_usd - self.spent_usd, Decimal(0))
 
 
-class BudgetGuard:
-    """Decides whether the next paid call may happen, and records what it cost."""
+class _WindowedGuard[Entry: (SpendRecord, SearchSpendRecord)]:
+    """The spend accounting both caps share: window → cached total → verdict → record.
+
+    Only two things differ between the LLM and the SERP guard, and both are *policy*: where
+    the window starts, and what to do once the cap is reached. Those are the two overrides.
+    The accounting underneath is one implementation because the subtle parts — carrying
+    unrecorded spend, invalidating the cache at a window boundary, folding a fresh record
+    into the cached total — are exactly the parts that silently stop a cap from capping when
+    a second copy of them drifts.
+    """
 
     def __init__(
         self,
         *,
-        ledger: SpendLedger,
-        daily_cap_usd: Decimal,
-        on_exceeded: OnBudgetExceeded,
+        ledger: _AnySpendLedger[Entry],
+        cap_usd: Decimal,
         timezone: str,
         cache_ttl_s: float = 5.0,
     ) -> None:
         self._ledger = ledger
-        self._cap = Decimal(daily_cap_usd)
-        self._on_exceeded = on_exceeded
+        self._cap = Decimal(cap_usd)
         self._tz = ZoneInfo(timezone)
         self._cache_ttl = timedelta(seconds=cache_ttl_s)
         self._cached_spend: Decimal | None = None
         self._cached_at: datetime | None = None
 
     @property
-    def ledger(self) -> SpendLedger:
-        return self._ledger
-
-    @property
     def cap_usd(self) -> Decimal:
         return self._cap
 
     def window_start(self, *, now: datetime | None = None) -> datetime:
-        """Local midnight in the tenant's timezone, as an aware UTC-comparable instant."""
-        moment = (now or datetime.now(UTC)).astimezone(self._tz)
-        return moment.replace(hour=0, minute=0, second=0, microsecond=0)
+        """Start of the current spend window, in the tenant's local time."""
+        raise NotImplementedError
+
+    def _verdict(self, spent: Decimal) -> BudgetVerdict:
+        """What to do now that `spent` is known. `ALLOW` below the cap, policy above it."""
+        raise NotImplementedError
 
     async def status(self, *, now: datetime | None = None) -> BudgetStatus:
         moment = now or datetime.now(UTC)
@@ -266,15 +291,53 @@ class BudgetGuard:
 
         # Spend the ledger could not persist is added on top, never subtracted. A failed
         # write must not make the cap forget money that was actually spent.
-        spent = self._cached_spend + getattr(self._ledger, "unrecorded_usd", Decimal(0))
-        if spent < self._cap:
-            verdict = BudgetVerdict.ALLOW
-        elif self._on_exceeded is OnBudgetExceeded.DEGRADE_TO_FIXTURE:
-            verdict = BudgetVerdict.DEGRADE
-        else:
-            verdict = BudgetVerdict.HALT
+        spent = self._cached_spend + self._ledger.unrecorded_usd
+        return BudgetStatus(
+            verdict=self._verdict(spent),
+            spent_usd=spent,
+            cap_usd=self._cap,
+            window_start=start,
+        )
 
-        return BudgetStatus(verdict=verdict, spent_usd=spent, cap_usd=self._cap, window_start=start)
+    async def record(self, entry: Entry) -> None:
+        await self._ledger.record(entry)
+        # Fold into the cached total so a burst inside one TTL window still trips the cap.
+        if self._cached_spend is not None:
+            self._cached_spend += entry.cost_usd
+
+
+class BudgetGuard(_WindowedGuard[SpendRecord]):
+    """Daily LLM cap. Decides whether the next paid call may happen, and records its cost."""
+
+    def __init__(
+        self,
+        *,
+        ledger: SpendLedger,
+        daily_cap_usd: Decimal,
+        on_exceeded: OnBudgetExceeded,
+        timezone: str,
+        cache_ttl_s: float = 5.0,
+    ) -> None:
+        super().__init__(
+            ledger=ledger, cap_usd=daily_cap_usd, timezone=timezone, cache_ttl_s=cache_ttl_s
+        )
+        self._on_exceeded = on_exceeded
+
+    @property
+    def ledger(self) -> SpendLedger:
+        return self._ledger
+
+    def window_start(self, *, now: datetime | None = None) -> datetime:
+        """Local midnight in the tenant's timezone, as an aware UTC-comparable instant."""
+        moment = (now or datetime.now(UTC)).astimezone(self._tz)
+        return moment.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def _verdict(self, spent: Decimal) -> BudgetVerdict:
+        if spent < self._cap:
+            return BudgetVerdict.ALLOW
+        if self._on_exceeded is OnBudgetExceeded.DEGRADE_TO_FIXTURE:
+            return BudgetVerdict.DEGRADE
+        return BudgetVerdict.HALT
 
     async def check(self, *, profile: str, task: str, now: datetime | None = None) -> BudgetStatus:
         """Raise `BudgetExceeded` if the cap is reached and the policy is `halt`."""
@@ -308,12 +371,6 @@ class BudgetGuard:
                 action="degrade_to_fixture",
             )
         return status
-
-    async def record(self, entry: SpendRecord) -> None:
-        await self._ledger.record(entry)
-        # Fold into the cached total so a burst inside one TTL window still trips the cap.
-        if self._cached_spend is not None:
-            self._cached_spend += entry.cost_usd
 
 
 # ============================================================== search (SERP) spend
@@ -355,26 +412,14 @@ class SearchSpendLedger(Protocol):
 
     async def spend_since(self, since: datetime) -> Decimal: ...
 
-
-class InMemorySearchSpendLedger:
-    """Process-local SERP ledger. Correct for dev and CI, refused outside development."""
-
-    def __init__(self) -> None:
-        self._entries: list[SearchSpendRecord] = []
-
-    async def record(self, entry: SearchSpendRecord) -> None:
-        self._entries.append(entry)
-
-    async def spend_since(self, since: datetime) -> Decimal:
-        return sum((e.cost_usd for e in self._entries if e.at >= since), start=Decimal(0))
-
     @property
     def unrecorded_usd(self) -> Decimal:
-        return Decimal(0)
+        """Spend this process knows about but could not persist. See `SpendLedger`."""
+        ...
 
-    @property
-    def entries(self) -> list[SearchSpendRecord]:
-        return list(self._entries)
+
+class InMemorySearchSpendLedger(_InMemoryLedger[SearchSpendRecord]):
+    """SERP spend, in process."""
 
 
 class PostgresSearchSpendLedger:
@@ -440,13 +485,14 @@ class PostgresSearchSpendLedger:
         return Decimal(total or 0)
 
 
-class SearchBudgetGuard:
-    """Monthly SERP cap. Deliberately a sibling of `BudgetGuard`, not a mode of it.
+class SearchBudgetGuard(_WindowedGuard[SearchSpendRecord]):
+    """Monthly SERP cap. A sibling policy on the shared accounting, not a mode of `BudgetGuard`.
 
-    The two guards answer different questions for different callers and their `degrade`
-    verdicts mean entirely different things — `degrade_to_fixture` swaps the provider,
-    `degrade_to_focused_only` skips general discovery altogether. Collapsing them into one
-    class with a window flag would put both policies in one branch.
+    The window differs (month, not day) and so does what `degrade` *means*:
+    `degrade_to_fixture` swaps the LLM provider, `degrade_to_focused_only` skips general
+    discovery altogether. Those two differences are all that is overridden below — folding
+    them into one class with a flag would put both policies in one branch, which is why
+    `check` stays separate rather than being generalised.
     """
 
     def __init__(
@@ -458,21 +504,14 @@ class SearchBudgetGuard:
         timezone: str,
         cache_ttl_s: float = 5.0,
     ) -> None:
-        self._ledger = ledger
-        self._cap = Decimal(monthly_cap_usd)
+        super().__init__(
+            ledger=ledger, cap_usd=monthly_cap_usd, timezone=timezone, cache_ttl_s=cache_ttl_s
+        )
         self._on_exceeded = on_exceeded
-        self._tz = ZoneInfo(timezone)
-        self._cache_ttl = timedelta(seconds=cache_ttl_s)
-        self._cached_spend: Decimal | None = None
-        self._cached_at: datetime | None = None
 
     @property
     def ledger(self) -> SearchSpendLedger:
         return self._ledger
-
-    @property
-    def cap_usd(self) -> Decimal:
-        return self._cap
 
     @property
     def on_exceeded(self) -> OnSearchBudgetExceeded:
@@ -483,30 +522,12 @@ class SearchBudgetGuard:
         moment = (now or datetime.now(UTC)).astimezone(self._tz)
         return moment.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    async def status(self, *, now: datetime | None = None) -> BudgetStatus:
-        moment = now or datetime.now(UTC)
-        start = self.window_start(now=moment)
-
-        if (
-            self._cached_spend is None
-            or self._cached_at is None
-            or moment - self._cached_at > self._cache_ttl
-            or self._cached_at < start
-        ):
-            self._cached_spend = await self._ledger.spend_since(start)
-            self._cached_at = moment
-
-        # Spend the ledger could not persist is added on top, never subtracted. A failed
-        # write must not make the cap forget money that was actually spent.
-        spent = self._cached_spend + getattr(self._ledger, "unrecorded_usd", Decimal(0))
+    def _verdict(self, spent: Decimal) -> BudgetVerdict:
         if spent < self._cap:
-            verdict = BudgetVerdict.ALLOW
-        elif self._on_exceeded is OnSearchBudgetExceeded.DEGRADE_TO_FOCUSED_ONLY:
-            verdict = BudgetVerdict.DEGRADE
-        else:
-            verdict = BudgetVerdict.HALT
-
-        return BudgetStatus(verdict=verdict, spent_usd=spent, cap_usd=self._cap, window_start=start)
+            return BudgetVerdict.ALLOW
+        if self._on_exceeded is OnSearchBudgetExceeded.DEGRADE_TO_FOCUSED_ONLY:
+            return BudgetVerdict.DEGRADE
+        return BudgetVerdict.HALT
 
     async def check(self, *, provider: str, now: datetime | None = None) -> BudgetStatus:
         """Raise `BudgetExceeded` unless the query may proceed.
@@ -543,8 +564,3 @@ class SearchBudgetGuard:
             provider=provider,
             action=action,
         )
-
-    async def record(self, entry: SearchSpendRecord) -> None:
-        await self._ledger.record(entry)
-        if self._cached_spend is not None:
-            self._cached_spend += entry.cost_usd

@@ -6,8 +6,6 @@ no SDK imports — a module that speaks these types cannot tell which provider a
 
 from __future__ import annotations
 
-import hashlib
-import json
 from decimal import Decimal
 from enum import StrEnum
 
@@ -100,36 +98,6 @@ class TokenUsage(BaseModel):
             output_tokens=self.output_tokens + other.output_tokens,
             reported=self.reported and other.reported,
         )
-
-
-class LLMRequest(BaseModel):
-    """The request as the port sees it, before any provider-specific shaping.
-
-    `cache_key()` is what the fixture provider records under, so a recording is
-    keyed by intent (task + schema + prompt) and not by which vendor produced it.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    task: str
-    schema_name: str
-    system: str
-    user: str
-    untrusted_content: str | None = None
-
-    def cache_key(self) -> str:
-        payload = json.dumps(
-            {
-                "task": self.task,
-                "schema": self.schema_name,
-                "system": self.system,
-                "user": self.user,
-                "untrusted_content": self.untrusted_content,
-            },
-            sort_keys=True,
-            ensure_ascii=False,
-        )
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class RawCompletion(BaseModel):

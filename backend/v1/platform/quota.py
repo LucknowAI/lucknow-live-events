@@ -65,8 +65,6 @@ class ProviderHealth:
 
     name: str
     consecutive_failures: int = 0
-    total_failures: int = 0
-    total_successes: int = 0
     disabled_until: datetime | None = None
     last_error: str | None = None
 
@@ -79,11 +77,9 @@ class ProviderHealth:
         self.consecutive_failures = 0
         self.disabled_until = None
         self.last_error = None
-        self.total_successes += 1
 
     def record_failure(self, error: str) -> None:
         self.consecutive_failures += 1
-        self.total_failures += 1
         self.last_error = error
 
     def open_breaker(self, cooldown: timedelta, *, now: datetime | None = None) -> None:
@@ -131,10 +127,6 @@ class SearchFailoverChain:
     @property
     def health(self) -> dict[str, ProviderHealth]:
         return dict(self._health)
-
-    @property
-    def switches(self) -> list[SwitchEvent]:
-        return list(self._switches)
 
     def drain_switches(self) -> list[str]:
         """Take the switch log and reset it, for attaching to one run's report."""

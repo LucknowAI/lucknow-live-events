@@ -66,12 +66,6 @@ class DiscoveredItem(BaseModel):
 
     seen_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    @property
-    def is_candidate(self) -> bool:
-        """Whether this should proceed to fetch. Listings and irrelevancies are recorded,
-        not followed."""
-        return self.verdict in {UrlVerdict.EVENT_PAGE, UrlVerdict.UNKNOWN}
-
 
 class TemplateOutcome(BaseModel):
     """Per-template accounting for one general-discovery run."""
@@ -131,16 +125,6 @@ class DiscoveryReport(BaseModel):
     """Human-readable failover events, e.g. `serper→dataforseo: provider_rate_limited`."""
 
     errors: list[str] = Field(default_factory=list)
-
-    @property
-    def total_cost_usd(self) -> Decimal:
-        return self.search_cost_usd + self.llm_cost_usd
-
-    def counts_by_verdict(self) -> dict[str, int]:
-        counts: dict[str, int] = {}
-        for item in self.items:
-            counts[str(item.verdict)] = counts.get(str(item.verdict), 0) + 1
-        return counts
 
 
 # --------------------------------------------------------------- LLM triage schema

@@ -19,16 +19,22 @@ import re
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
+from typing import Annotated
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from v1.contracts.llm import StructuredOutputStrategy
 from v1.contracts.search import DEFAULT_NUM, SearchCapabilities, SearchIndex
 from v1.contracts.source import ENUMERABLE_TIERS, SourceTier
 
 ENV_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+Term = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+"""A locality vocabulary entry. Trimmed, and a blank one is a config error rather than a
+term that renders into a dork as nothing."""
+
 LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0", "host.docker.internal"})
 
 
@@ -312,24 +318,9 @@ class LocalityConfig(_Strict):
     code change — that is the config-over-code proof (ADR-013, `13 §2`).
     """
 
-    city_keywords: list[str] = Field(default_factory=list, max_length=100)
-    community_names: list[str] = Field(default_factory=list, max_length=200)
-    institution_names: list[str] = Field(default_factory=list, max_length=200)
-
-    @model_validator(mode="after")
-    def _validate_locality(self) -> LocalityConfig:
-        for name, values in (
-            ("city_keywords", self.city_keywords),
-            ("community_names", self.community_names),
-            ("institution_names", self.institution_names),
-        ):
-            if any(not value.strip() for value in values):
-                raise ValueError(f"locality.{name} contains an empty entry")
-        return self
-
-    @property
-    def all_terms(self) -> list[str]:
-        return [*self.city_keywords, *self.community_names, *self.institution_names]
+    city_keywords: list[Term] = Field(default_factory=list, max_length=100)
+    community_names: list[Term] = Field(default_factory=list, max_length=200)
+    institution_names: list[Term] = Field(default_factory=list, max_length=200)
 
 
 # =============================================================================== search
@@ -627,10 +618,6 @@ class SearchConfig(_Strict):
                 )
         return self
 
-    @property
-    def paid_chain_members(self) -> list[str]:
-        return [name for name in self.chain if self.providers[name].is_paid]
-
 
 # ============================================================================ discovery
 
@@ -789,9 +776,6 @@ class DiscoveryConfig(_Strict):
                 raise ValueError(f"duplicate discovery source id {source.id!r}")
             seen.add(source.id)
         return self
-
-    def source_by_id(self, source_id: str) -> SourceConfig | None:
-        return next((source for source in self.sources if source.id == source_id), None)
 
 
 class TemplateConfig(_Strict):

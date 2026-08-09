@@ -101,9 +101,6 @@ class UrlClassifier:
             rule_id="no_match",
         )
 
-    def classify_many(self, urls: list[str]) -> list[UrlClassification]:
-        return [self.classify(url) for url in urls]
-
 
 # ------------------------------------------------------------------- LLM triage
 

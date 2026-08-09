@@ -102,7 +102,7 @@ class DiscoveryRunner:
                 general_classifications,
                 template_outcomes,
                 errors_general,
-            ) = await self._run_general(templates, started_at)
+            ) = await self._run_general(templates or [], started_at)
             items.extend(general_items)
             classifications.extend(general_classifications)
             errors.extend(errors_general)
@@ -137,7 +137,7 @@ class DiscoveryRunner:
     # -------------------------------------------------------------------- general
 
     async def _run_general(
-        self, templates: list[TemplateConfig] | None, now: datetime
+        self, templates: list[TemplateConfig], now: datetime
     ) -> tuple[list[DiscoveredItem], list[UrlClassification], list[TemplateOutcome], list[str]]:
         discovery = self._config.discovery
         search = self._config.search
@@ -146,7 +146,6 @@ class DiscoveryRunner:
             # and so is a run whose SERP keys are absent — the focused half already ran.
             return [], [], [], ["general discovery unavailable: no search chain configured"]
 
-        selected = templates if templates is not None else discovery_templates(self._config)
         general = GeneralDiscovery(
             chain=self._chain,
             classifier=self._classifier,
@@ -158,7 +157,7 @@ class DiscoveryRunner:
         context = build_context(
             self._config.locality, timezone=self._config.tenant.timezone, now=now
         )
-        items, classifications, outcomes = await general.run(selected, context)
+        items, classifications, outcomes = await general.run(templates, context)
         return items, classifications, outcomes, []
 
     # --------------------------------------------------------------------- triage
@@ -243,14 +242,3 @@ class DiscoveryRunner:
                 classifications.append(classification)
 
         return resolved, classifications, calls, cost
-
-
-def discovery_templates(config: EngineConfig) -> list[TemplateConfig]:
-    """Placeholder hook so the runner has one place to ask for templates.
-
-    The real selection (which tier is due at this hour) belongs to Phase 8's scheduler,
-    which knows what kind of run this is. Until then, callers pass templates explicitly and
-    this returns nothing rather than guessing that every template should run every time —
-    a guess that would be wrong in the expensive direction.
-    """
-    return []
