@@ -128,3 +128,113 @@ def registry(loaded_config: LoadedConfig, ledger: InMemorySpendLedger) -> LLMReg
     # No cleanup needed: only mock/fixture profiles are exercised here and the network
     # adapters build their clients lazily, so nothing is opened.
     return LLMRegistry.from_config(loaded_config, ledger=ledger)
+
+
+# ---------------------------------------------------------------- discovery (Phase 2)
+
+SEARCH_CONFIG: dict[str, Any] = {
+    "chain": ["primary", "backup", "replay"],
+    "budget": {"monthly_usd_cap": 5.00, "on_exceeded": "halt", "ledger": "memory"},
+    "cache": {"ttl_hours": 6, "backend": "memory"},
+    "defaults": {"num": 10, "gl": "in", "hl": "en"},
+    "allow_deep_pages": False,
+    "failover": {"consecutive_failures": 2, "cooldown_minutes": 30},
+    "providers": {
+        "primary": {
+            "adapter": "serper",
+            "api_key_ref": "TEST_SERPER_KEY",
+            "pricing": {
+                "usd_per_query": 0.001,
+                "deep_query_multiplier": 2,
+                "source": "test",
+                "as_of": "2026-08-08",
+            },
+        },
+        "backup": {
+            "adapter": "tavily",
+            "api_key_ref": "TEST_TAVILY_KEY",
+            "pricing": {"usd_per_query": 0.008, "source": "test", "as_of": "2026-08-08"},
+        },
+        "replay": {"adapter": "fixture", "fixture_dir": "tests/v1/fixtures/serp"},
+    },
+}
+
+DISCOVERY_CONFIG: dict[str, Any] = {
+    "novelty_floor": 0.15,
+    "templates_path": "templates.yaml",
+    "triage": {"enabled": False, "task": "url_triage", "batch_size": 5, "max_batches": 2},
+    "url_rules": {
+        "blocked_hosts": ["facebook.com", "linkedin.com"],
+        "listing_patterns": [r"/events/?$", r"[?&]page=\d+"],
+        "event_patterns": [r"/events/details/", r"/events/[^/]+$"],
+    },
+    "sources": [
+        {
+            "id": "demo_chapter",
+            "adapter": "bevy_api",
+            "tier": "T0",
+            "base_url": "https://events.example.com",
+            "external_ref": "42",
+            "unfiltered_sentinel": 5000,
+        }
+    ],
+}
+
+TEMPLATES_FILE: dict[str, Any] = {
+    "templates": [
+        {
+            "id": "alpha",
+            "tier": "A",
+            "query": "site:example.com inurl:/events/details/ ({city_keywords}) after:{date_floor}",
+            "max_pages": 3,
+        },
+        {"id": "beta", "tier": "B", "query": "({community_names}) register", "max_pages": 2},
+    ]
+}
+
+LOCALITY_CONFIG: dict[str, Any] = {
+    "city_keywords": ["Testville"],
+    "community_names": ["Testville Devs"],
+    "institution_names": ["Testville Institute"],
+}
+
+
+@pytest.fixture
+def write_discovery_config(tmp_path: Path, write_config: Any) -> Any:
+    """An instance config with `locality`, `search` and `discovery`, plus templates.yaml.
+
+    Kept separate from `write_config` so the Phase 1 tests keep exercising a config that
+    has no search section at all — which is a supported, zero-spend deployment shape and
+    would otherwise stop being tested.
+    """
+
+    def _write(overrides: dict | None = None, templates: dict | None = None) -> Path:
+        (tmp_path / "templates.yaml").write_text(
+            yaml.safe_dump(templates or TEMPLATES_FILE, sort_keys=False), encoding="utf-8"
+        )
+        base = {
+            "locality": LOCALITY_CONFIG,
+            "search": SEARCH_CONFIG,
+            "discovery": DISCOVERY_CONFIG,
+        }
+        return write_config(deep_merge(base, overrides or {}))
+
+    return _write
+
+
+@pytest.fixture
+def search_resolver(tmp_path: Path) -> SecretResolver:
+    """Resolves the test SERP keys from a mounted-file secrets dir."""
+    secrets_dir = tmp_path / "secrets"
+    secrets_dir.mkdir(exist_ok=True)
+    (secrets_dir / "TEST_GEMINI_KEY").write_text("test-key-value\n", encoding="utf-8")
+    (secrets_dir / "TEST_SERPER_KEY").write_text("serper-test-key\n", encoding="utf-8")
+    (secrets_dir / "TEST_TAVILY_KEY").write_text("tavily-test-key\n", encoding="utf-8")
+    return SecretResolver(env_prefix="NO_SUCH_PREFIX_", secrets_dir=secrets_dir)
+
+
+@pytest.fixture
+def discovery_config(
+    settings: V1Settings, write_discovery_config: Any, search_resolver: SecretResolver
+) -> LoadedConfig:
+    return load_config(write_discovery_config(), settings=settings, resolver=search_resolver)

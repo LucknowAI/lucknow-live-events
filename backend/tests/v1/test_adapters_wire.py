@@ -69,7 +69,7 @@ def openai_profile(**overrides: Any) -> LLMProfileConfig:
 def openai_provider(**overrides: Any) -> OpenAICompatibleProvider:
     api_key = overrides.pop("api_key", "stub-key")
     return OpenAICompatibleProvider(
-        name="wire", profile=openai_profile(**overrides), api_key=api_key
+        name="wire", profile=openai_profile(**overrides), api_key=api_key, allow_live=True
     )
 
 
@@ -296,7 +296,9 @@ def ollama_provider(**overrides: Any) -> OllamaNativeProvider:
         "structured_output": StructuredOutputStrategy.NATIVE_SCHEMA,
         "max_retries": 0,
     }
-    return OllamaNativeProvider(name="ollama", profile=LLMProfileConfig(**(defaults | overrides)))
+    return OllamaNativeProvider(
+        name="ollama", profile=LLMProfileConfig(**(defaults | overrides)), allow_live=True
+    )
 
 
 def ollama_response(content: str = VALID_JSON, **overrides: Any) -> dict:

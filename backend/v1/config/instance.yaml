@@ -20,6 +20,37 @@ tenant:
   name: Lucknow Tech Events
   timezone: Asia/Kolkata
 
+# =============================================================================
+# locality — what "here" and "our communities" mean for this instance
+# =============================================================================
+# These lists are interpolated into the dork templates ({city_keywords},
+# {community_names}, {institution_names}) and used to filter feed URLs. Replacing this
+# block with another city's changes what discovery finds, with no code change — which is
+# the config-over-code proof the plan asks for.
+locality:
+  city_keywords:
+    - Lucknow
+    - Gomti Nagar
+    - Hazratganj
+
+  community_names:
+    - GDG Lucknow
+    - GDG on Campus Lucknow
+    - TFUG Lucknow
+    - FOSS United Lucknow
+    - AWS User Group Lucknow
+    - AWS Cloud Club Lucknow
+    - Lucknow AI Labs
+    - Cloud Native Lucknow
+
+  institution_names:
+    - IIIT Lucknow
+    - SRMCEM
+    - BBDNIIT
+    - BBD University
+    - BNCET
+    - Integral University
+
 llm:
   # The profile used by any task without an explicit override below.
   default: gemini_flash_lite
@@ -175,3 +206,223 @@ llm:
     ci_mock:
       adapter: mock
       structured_output: native_schema
+
+# =============================================================================
+# search — the SERP providers and the spend cap
+# =============================================================================
+# Ordered failover chain. There is no first-party search API available any more (Bing
+# retired Aug 2025; Google's Custom Search JSON API is closed to new customers and dies
+# 1 Jan 2027), so every option here is a third-party SERP provider. Brave is deliberately
+# absent: its free tier ended Feb 2026, it costs ~5-16x Serper, and its independent index
+# does not honour the Google operator syntax every template below is written in.
+search:
+  chain: [serper, dataforseo, tavily]
+
+  budget:
+    # MONTHLY, not daily. Right-sized volume is ~1,400 queries/month at ~$1-1.40, so a
+    # daily cap at that rate would fire on any normal backfill. Same accounting module as
+    # the LLM cap, different window.
+    monthly_usd_cap: 5.00
+
+    # halt: raise BudgetExceeded and make no query.
+    # degrade_to_focused_only: keep the run going with focused ingestion, which is free.
+    on_exceeded: halt
+
+    # memory resets on restart; postgres survives it. Required outside development.
+    ledger: memory
+
+  cache:
+    # Tier-A templates re-render to the same query every run, so a TTL shorter than the
+    # run interval is the whole saving. Keyed sha256(query|provider|page|num|gl|hl|tbs).
+    ttl_hours: 6
+    # postgres is the only setting that does anything for a cron-style run, since the
+    # process exits between runs. The app refuses to start on `memory` outside development.
+    backend: memory
+    max_entries: 5000
+
+  defaults:
+    num: 10
+    gl: in
+    hl: en
+
+  # Serper charges ONE credit for up to 10 results and TWO for 11-100. Two pages of ten
+  # therefore cost less than one page of a hundred and return the same useful top twenty.
+  allow_deep_pages: false
+
+  failover:
+    consecutive_failures: 3
+    cooldown_minutes: 30
+
+  providers:
+    # ------------------------------------------------------------- primary
+    # Real Google index, full operator support, cheapest credible per query, and 2,500
+    # free credits once per account which covers the whole build phase.
+    serper:
+      adapter: serper
+      api_key_ref: SERPER_API_KEY
+      timeout_s: 20
+      max_retries: 2
+      pricing:
+        usd_per_query: 0.001            # $1.00 / 1k at the $50 entry pack
+        deep_query_multiplier: 2        # 11-100 results costs two credits
+        source: https://apiserpent.com/blog/serper-pricing-credits-explained
+        as_of: 2026-08-08
+
+    # ----------------------------------------------------------- secondary
+    # Same Google index, so the dorks keep working. `standard` is the async task_post →
+    # task_get flow at ~$0.60/1k; `live` is one synchronous request at ~$2.00/1k. Declared
+    # explicitly because a ~3x price difference should not live in a code default.
+    dataforseo:
+      adapter: dataforseo
+      mode: standard
+      api_key_ref: DATAFORSEO_CREDENTIALS   # resolves to "login:password"
+      timeout_s: 30
+      poll_interval_s: 2
+      poll_timeout_s: 120
+      pricing:
+        usd_per_query: 0.0006
+        deep_query_multiplier: 1        # depth-priced, no credit cliff
+        source: https://docs.dataforseo.com/v3/serp-google-organic-overview/
+        as_of: 2026-08-08
+      extra_params:
+        location_code: 2356             # India
+
+    # ------------------------------------------------------------ tertiary
+    # The only recurring free monthly tier left (1,000 credits). Emergency net only: it
+    # has NO pagination parameter and weak operator support, both of which are declared
+    # capabilities so the walker never pays to discover them.
+    tavily:
+      adapter: tavily
+      api_key_ref: TAVILY_API_KEY
+      max_num: 20
+      timeout_s: 30
+      pricing:
+        usd_per_query: 0.008
+        deep_query_multiplier: 1
+        source: https://docs.tavily.com/documentation/api-reference/endpoint/search
+        as_of: 2026-08-08
+
+    # ------------------------------------------------------- deterministic
+    # Replays recorded SERP JSON. Zero cost, identical every run — what CI uses, and what
+    # a demo uses when no key is present. Set `record_from: serper` plus
+    # V1_SEARCH_ALLOW_LIVE=1 to record a missing response once.
+    ci_fixture:
+      adapter: fixture
+      fixture_dir: tests/v1/fixtures/serp
+
+# =============================================================================
+# discovery — templates, URL rules, triage, and the free (focused) sources
+# =============================================================================
+discovery:
+  # Stop descending pages once fewer than this share of results are URLs we have never
+  # seen. An economic stop condition: below it, the page is not paying for itself.
+  novelty_floor: 0.15
+
+  # A query marked exhausted (two consecutive unproductive runs) is skipped entirely for
+  # this long. Not paying at all beats paying less.
+  exhausted_reset_hours: 168
+
+  max_pages_default: 3
+  templates_path: templates.yaml
+
+  triage:
+    # URLs no rule matched are batched into ONE LLM call per batch, never one per URL.
+    enabled: true
+    task: url_triage
+    batch_size: 20
+    max_batches: 3
+
+  url_rules:
+    allowed_schemes: [http, https]
+
+    # Never event pages. Matched on the host and any subdomain — never as a substring,
+    # because "facebook.com" is a substring of "notfacebook.com.evil.example".
+    blocked_hosts:
+      - facebook.com
+      - instagram.com
+      - x.com
+      - twitter.com
+      - youtube.com
+      - youtu.be
+      - linkedin.com
+      - pinterest.com
+      - reddit.com
+      - t.me
+      - whatsapp.com
+      - bit.ly
+      - tinyurl.com
+
+    # Directory / calendar / browse pages. Checked BEFORE the event patterns, because a
+    # listing URL often contains the event marker as a prefix, and a directory misfiled as
+    # a single event gets fetched, extracted and produces a garbage event.
+    listing_patterns:
+      - '/events/?$'
+      - '/events/(browse|search|explore|discover|all|upcoming|past)'
+      - '/(search|browse|explore|discover|categories|tags)(/|$|\?)'
+      - '[?&]page=\d+'
+      - '/hackathons/?$'
+      - '/opportunity/?$'
+      - '/communities/?$'
+      - '/chapters/?$'
+      - '/sitemap'
+
+    # Single event pages. `inurl:/events/details/` is the strongest signal we have, which
+    # is why it is also inside the templates: filtering in-query means we never pay to
+    # retrieve the listing page in the first place.
+    event_patterns:
+      - '/events/details/'
+      - '/communities/[^/]+/events/[^/]+'
+      - '/e/[A-Za-z0-9_-]{4,}'
+      - '/events/[^/]+/[^/]+'
+      - '/hackathons/[^/]+/?$'
+
+  # ---------------------------------------------------------------------------
+  # Focused sources — enumerated with ZERO search spend. This is the path that
+  # covers the known communities, and the reason general discovery only needs to
+  # be a supplement.
+  # ---------------------------------------------------------------------------
+  sources:
+    # Bevy's public event API is unauthenticated and returns a whole chapter's events,
+    # already structured, in one request. `external_ref` is the numeric chapter id; it
+    # cannot be looked up through the API (/api/chapter/ requires auth), so it is resolved
+    # once from the chapter page and written down here.
+    #
+    # unfiltered_sentinel guards the silent-filter gotcha: Bevy ignores unknown query
+    # parameters, so a typo'd filter answers HTTP 200 with the entire ~70,000-event global
+    # feed. No single chapter has thousands of events.
+    - id: gdg_lucknow
+      name: GDG Lucknow
+      adapter: bevy_api
+      tier: T0
+      base_url: https://gdg.community.dev
+      external_ref: "1227"
+      unfiltered_sentinel: 5000
+      max_items: 500
+
+    - id: gdgoc_integral_university
+      name: GDG on Campus Integral University
+      adapter: bevy_api
+      tier: T0
+      base_url: https://gdg.community.dev
+      external_ref: "1952"
+      unfiltered_sentinel: 5000
+      max_items: 500
+
+    # Commudle is an Angular SPA with no JSON-LD and a token-gated API, but it publishes a
+    # sitemap index whose events child holds ~5,000 URLs with the community slug in the
+    # path. include_patterns cut that to the relevant ones before a single page is fetched.
+    - id: commudle_events
+      name: Commudle (events sitemap)
+      adapter: sitemap
+      tier: T1
+      url: https://www.commudle.com/sitemap.xml
+      max_items: 2000
+      timeout_s: 60
+      include_patterns:
+        - '/communities/[^/]*(lucknow|iiitl|iiit-lucknow|srmcem|bbd|bncet|integral)[^/]*/events/'
+      # Which children of the index to REQUEST at all. Measured: following every child
+      # pulled 205,336 URLs in 117 seconds to find the 178 we wanted. This makes it one
+      # request over ~5,000 URLs. An allowlist, so the next child somebody adds is not
+      # crawled by default.
+      child_include_patterns:
+        - 'sitemap_events\.xml$'

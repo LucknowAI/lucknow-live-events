@@ -122,6 +122,60 @@ class ProfileUnavailable(EngineError):
     http_status = 503
 
 
+# --------------------------------------------------------------------------- search
+
+
+class SearchUnsupported(ProviderError):
+    """The provider cannot serve this query shape — e.g. page 2 with no pagination.
+
+    Deliberately *not* an empty result. A provider that silently returns page 1 when asked
+    for page 2 makes the novelty floor read "no new URLs, this query is mined out" while
+    charging for every repeat. Naming the limitation is what lets the walker stop instead.
+    """
+
+    code = "search_unsupported"
+    http_status = 400
+    retryable = False
+
+
+class AllProvidersExhausted(EngineError):
+    """Every provider in the failover chain failed or was skipped.
+
+    `context["attempts"]` carries the per-provider reason, so "discovery returned nothing"
+    is never the whole story.
+    """
+
+    code = "all_providers_exhausted"
+    http_status = 503
+
+
+# --------------------------------------------------------------------------- sources
+
+
+class SourceEnumerationFailed(EngineError):
+    """A focused source could not be enumerated, or returned an implausible result.
+
+    The second half matters more than the first. Bevy's API silently ignores unknown query
+    parameters, so a typo'd filter returns the entire global firehose with HTTP 200 — a
+    failure that looks exactly like success. An enumerator asserts its result is plausibly
+    filtered and raises this rather than handing back 70,000 candidates.
+    """
+
+    code = "source_enumeration_failed"
+    http_status = 502
+
+
+class MalformedFeed(SourceEnumerationFailed):
+    """A feed/sitemap was unparseable, oversized, or contained a DTD.
+
+    Sitemaps are third-party XML. Python's stdlib parser blocks external entities but
+    still expands internal ones, so an entity bomb is reachable; a sitemap has no
+    legitimate use for a DTD, so any `<!DOCTYPE` is refused before parsing starts.
+    """
+
+    code = "malformed_feed"
+
+
 # -------------------------------------------------------------------- structured out
 
 
@@ -160,6 +214,24 @@ class SchemaValidationFailed(EngineError):
 
 
 # ---------------------------------------------------------------------- budget/fixt
+
+
+class LiveSpendNotPermitted(EngineError):
+    """A paid provider was called without the process opting in to live spend.
+
+    Separate from `BudgetExceeded` on purpose: that one means "the cap says stop", this
+    one means "this process was never allowed to spend at all". They need different
+    answers — the first is a budgeting problem, the second is a missing environment
+    variable — and reporting one as the other sends an operator to the wrong place.
+
+    A resolved API key is not consent. Keys live in shared `.env` files and get inherited
+    by every shell, test runner and container on the machine; a discovery run issues
+    hundreds of queries with nobody watching. So spending needs a second, explicit switch
+    (`V1_LLM_ALLOW_LIVE` / `V1_SEARCH_ALLOW_LIVE`) that nothing sets by accident.
+    """
+
+    code = "live_spend_not_permitted"
+    http_status = 403
 
 
 class BudgetExceeded(EngineError):

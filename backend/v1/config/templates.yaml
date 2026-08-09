@@ -1,0 +1,106 @@
+# =============================================================================
+# Engine V1 — dork template bank
+# =============================================================================
+# ADR-019: query planning is deterministic config, not an LLM decision. V0 asks Gemini to
+# invent the queries, which is why nobody has ever seen them, nobody can diff them between
+# runs, and nobody can explain why a source stopped appearing. Every query below is a
+# string you can paste into Google.
+#
+# Tuning discovery is therefore a config change, not a deploy.
+#
+# Placeholders, filled per run from `instance.yaml`:
+#   {date_floor}          after: cut-off, YYYY-MM-DD, 45 days back in the tenant timezone
+#   {month_window}        "August 2026" OR "September 2026"
+#   {year}                current year
+#   {city_keywords}       "A" OR "B"  from locality.city_keywords
+#   {community_names}     "A" OR "B"  from locality.community_names
+#   {institution_names}   "A" OR "B"  from locality.institution_names
+#
+# An unknown or empty placeholder is a render failure, not a query containing a literal
+# `{foo}` — a malformed dork does not error at Google, it silently matches nothing, and a
+# template that quietly stops returning results looks exactly like a source going quiet.
+#
+# tier: A = every general run · B = daily · C = weekly, exploratory
+#
+# Two rules worth defending:
+#   1. Filter IN THE QUERY, not after it. `inurl:/events/details/` means Google never
+#      returns the chapter home page, so we never pay to retrieve and discard it.
+#   2. `after:{date_floor}` on nearly everything. A page indexed six weeks ago is almost
+#      certainly a past event, and excluding it costs nothing.
+# =============================================================================
+
+templates:
+  # ------------------------------------------------------------------- tier A
+  # Known-good platforms. High yield per query, so they run every time.
+
+  - id: gdg_bevy_event_pages
+    tier: A
+    query: 'site:gdg.community.dev inurl:/events/details/ ({city_keywords} OR {institution_names}) after:{date_floor}'
+    max_pages: 3
+    note: >-
+      Overlaps the focused bevy_api source on purpose. The API covers chapters whose id we
+      already know; this catches events from chapters nobody has told us about yet.
+
+  - id: luma_city
+    tier: A
+    query: 'site:lu.ma ({city_keywords}) ({month_window}) -inurl:/discover -inurl:/explore'
+    max_pages: 3
+    note: Luma is a Cloudflare-fronted SPA with no public discovery API, so search is the only way in.
+
+  - id: commudle_city_events
+    tier: A
+    query: 'site:commudle.com inurl:/events/ ({city_keywords}) after:{date_floor}'
+    max_pages: 2
+
+  - id: devfolio_hackathons
+    tier: A
+    query: 'site:devfolio.co (inurl:/hackathons/ OR inurl:.devfolio.co) ({city_keywords}) after:{date_floor}'
+    max_pages: 2
+    note: Devfolio serves its SPA shell at /sitemap.xml, so there is no feed to enumerate.
+
+  - id: named_communities_wide
+    tier: A
+    query: '({community_names}) (register OR RSVP OR "register now") after:{date_floor}'
+    max_pages: 4
+    note: >-
+      Platform-agnostic. This is the one that finds a known community announcing on a
+      platform we have never seen.
+
+  # ------------------------------------------------------------------- tier B
+  # Broader and noisier. Daily is enough.
+
+  - id: unstop_city
+    tier: B
+    query: 'site:unstop.com ({city_keywords} OR {institution_names}) (hackathon OR workshop OR "tech fest") after:{date_floor}'
+    max_pages: 2
+
+  - id: college_fests
+    tier: B
+    query: '({institution_names}) (hackathon OR "tech fest" OR "e-summit" OR symposium) {year} (register OR devfolio OR unstop)'
+    max_pages: 2
+
+  - id: meetup_and_eventbrite
+    tier: B
+    query: '(site:meetup.com OR site:eventbrite.com) ({city_keywords}) (tech OR developer OR AI OR cloud) after:{date_floor}'
+    max_pages: 2
+    note: >-
+      Both platforms removed third-party event discovery from their APIs, so their public
+      pages are only reachable through search.
+
+  # ------------------------------------------------------------------- tier C
+  # The exploratory net: expensive per useful URL, so weekly. This is how a platform
+  # nobody told us about gets discovered at all.
+
+  - id: meta_signal_hunt
+    tier: C
+    query: 'intitle:({city_keywords}) intext:("tech event" OR hackathon OR "developer meetup") after:{date_floor} -site:linkedin.com -site:facebook.com -site:youtube.com'
+    max_pages: 5
+
+  - id: ics_and_feeds
+    tier: C
+    query: '({city_keywords}) (filetype:ics OR inurl:/events.ics OR inurl:/calendar.ics) (tech OR developer OR community)'
+    max_pages: 2
+    requires_operators: true
+    note: >-
+      Hunts for T1 sources rather than events. An .ics feed found once becomes a focused
+      source that costs nothing forever after.

@@ -51,6 +51,8 @@ class CallOutcome(StrEnum):
     SCHEMA_FAILED = "schema_failed"
     PROVIDER_ERROR = "provider_error"
     BUDGET_BLOCKED = "budget_blocked"
+    SPEND_NOT_PERMITTED = "spend_not_permitted"
+    """The process never opted in to live spend, so the call was not made."""
 
 
 class LLMCapabilities(BaseModel):

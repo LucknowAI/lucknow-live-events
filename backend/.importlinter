@@ -19,9 +19,14 @@ type = layers
 ; Every subpackage is listed. Omitting one (`config` and `models` were, originally) leaves it
 ; unconstrained, which is how `platform` and `config` ended up importing each other at package
 ; level without anything complaining.
+;
+; `modules` and `providers` are siblings on one line, which import-linter reads as
+; "independent": neither may import the other. That is the boundary that keeps a module
+; free of vendor code — a discovery strategy talks to `ports.search`, and `api` is what
+; wires the concrete Serper adapter behind it.
 layers =
     api
-    providers
+    modules : providers
     platform
     config
     models
@@ -29,6 +34,15 @@ layers =
     contracts
 containers =
     v1
+
+[importlinter:contract:modules-are-independent]
+name = One module never imports another module
+type = independence
+; One entry today. It is here from the first module rather than the second, because the
+; import that breaks this rule is always added when there is only one module and the rule
+; looks like paperwork. Phase 3's `fetch` joins the list.
+modules =
+    v1.modules.discovery
 
 [importlinter:contract:contracts-are-leaves]
 name = contracts/ depends on nothing of ours
@@ -39,6 +53,7 @@ forbidden_modules =
     v1.api
     v1.config
     v1.models
+    v1.modules
     v1.platform
     v1.ports
     v1.providers
@@ -52,6 +67,7 @@ forbidden_modules =
     v1.api
     v1.config
     v1.models
+    v1.modules
     v1.platform
     v1.providers
     google
@@ -72,18 +88,24 @@ forbidden_modules =
     workers
 
 [importlinter:contract:no-vendor-sdk-outside-providers]
-name = Vendor LLM SDKs are confined to providers/
+name = Vendor SDKs and HTTP clients are confined to providers/
 type = forbidden
 ; Direct imports only. api/ is *supposed* to reach providers/ (that is the layering), and
 ; providers/ is where the SDKs live — so a transitive path through them is correct, while a
 ; direct `import openai` in a router is the mistake this contract catches.
+;
+; `httpx` is forbidden for `v1.modules` specifically: a module that can open its own socket
+; is a module that will, and then the port it was supposed to be using stops being the
+; only way in. Providers do the IO; modules decide what to do with it.
 allow_indirect_imports = True
 source_modules =
     v1.contracts
     v1.ports
     v1.config
     v1.models
+    v1.modules
     v1.api
 forbidden_modules =
     google
     openai
+    httpx

@@ -22,6 +22,7 @@ on:
       - "backend/tests/v1/**"
       - "backend/.importlinter"
       - "backend/pyproject.toml"
+      - "backend/alembic_v1.ini"
       - ".github/workflows/engine-v1.yml"
   pull_request:
     paths:
@@ -29,6 +30,7 @@ on:
       - "backend/tests/v1/**"
       - "backend/.importlinter"
       - "backend/pyproject.toml"
+      - "backend/alembic_v1.ini"
       - ".github/workflows/engine-v1.yml"
 
 concurrency:
@@ -43,8 +45,9 @@ jobs:
         working-directory: backend
     env:
       # Belt and braces: even if a fixture leaked a paid profile into a test, the engine
-      # refuses to spend without this set.
+      # refuses to spend without either of these set.
       V1_LLM_ALLOW_LIVE: ""
+      V1_SEARCH_ALLOW_LIVE: ""
       V1_ENVIRONMENT: development
 
     steps:
@@ -88,4 +91,21 @@ jobs:
               assert body["status"] == "ok", body
               assert body["profiles_available"] >= 1, body
               print("boot ok:", body)
+          PY
+
+      - name: Every dork template renders
+        # A malformed dork does not error at Google — it silently matches nothing, so a
+        # template broken by a config edit would look exactly like a source going quiet.
+        # This is the check that turns that into a failed build.
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          from v1.api.app import app
+          with TestClient(app) as c:
+              body = c.get("/discovery/templates").json()
+              broken = [t["id"] for t in body["templates"] if t["render_error"]]
+              assert not broken, f"templates failed to render: {broken}"
+              unfilled = [t["id"] for t in body["templates"] if "{" in t["rendered_query"]]
+              assert not unfilled, f"templates left a placeholder unfilled: {unfilled}"
+              print(f"{len(body['templates'])} templates render cleanly")
           PY

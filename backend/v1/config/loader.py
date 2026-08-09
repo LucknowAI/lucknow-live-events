@@ -19,7 +19,7 @@ Secrets are resolved from, in order: `V1_<NAME>` env, `<NAME>` env, then
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -27,7 +27,12 @@ from typing import Any
 import yaml
 from pydantic import ValidationError
 
-from v1.config.schema import COSTLESS_ADAPTERS, EngineConfig, LLMProfileConfig
+from v1.config.schema import (
+    COSTLESS_ADAPTERS,
+    EngineConfig,
+    LLMProfileConfig,
+    TemplatesFile,
+)
 from v1.config.settings import V1Settings, get_settings
 from v1.contracts.errors import ConfigError, ProfileUnavailable, SecretMissing
 
@@ -86,8 +91,18 @@ class LoadedConfig:
     """profile name -> resolved API key. Absent for keyless/local/costless profiles."""
     availability: dict[str, ProfileAvailability]
 
+    search_keys: dict[str, str] = field(default_factory=dict)
+    """search provider name -> resolved API key (or `login:password` for DataForSEO)."""
+
+    search_availability: dict[str, ProfileAvailability] = field(default_factory=dict)
+    templates: TemplatesFile = field(default_factory=TemplatesFile)
+    templates_path: Path | None = None
+
     def api_key_for(self, profile_name: str) -> str | None:
         return self.api_keys.get(profile_name)
+
+    def search_key_for(self, provider_name: str) -> str | None:
+        return self.search_keys.get(provider_name)
 
     def require_available(self, profile_name: str) -> None:
         entry = self.availability.get(profile_name)
@@ -97,6 +112,16 @@ class LoadedConfig:
             raise ProfileUnavailable(
                 f"profile {profile_name!r} is not usable: {entry.reason}",
                 profile=profile_name,
+            )
+
+    def require_search_available(self, provider_name: str) -> None:
+        entry = self.search_availability.get(provider_name)
+        if entry is None:
+            raise ConfigError(f"unknown search provider {provider_name!r}")
+        if not entry.available:
+            raise ProfileUnavailable(
+                f"search provider {provider_name!r} is not usable: {entry.reason}",
+                provider=provider_name,
             )
 
 
@@ -124,7 +149,32 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _apply_search_env_overrides(data: dict[str, Any], settings: V1Settings) -> None:
+    search = data.get("search")
+    if not isinstance(search, dict):
+        return
+
+    if settings.SEARCH_FORCE_PROVIDER:
+        search["chain"] = [settings.SEARCH_FORCE_PROVIDER]
+    if settings.SEARCH_BUDGET_LEDGER:
+        budget = search.setdefault("budget", {})
+        if isinstance(budget, dict):
+            budget["ledger"] = settings.SEARCH_BUDGET_LEDGER
+    if settings.SEARCH_CACHE_BACKEND:
+        cache = search.setdefault("cache", {})
+        if isinstance(cache, dict):
+            cache["backend"] = settings.SEARCH_CACHE_BACKEND
+    if settings.SEARCH_FIXTURE_DIR:
+        providers = search.get("providers")
+        if isinstance(providers, dict):
+            for provider in providers.values():
+                if isinstance(provider, dict) and provider.get("adapter") == "fixture":
+                    provider["fixture_dir"] = str(settings.SEARCH_FIXTURE_DIR)
+
+
 def _apply_env_overrides(data: dict[str, Any], settings: V1Settings) -> dict[str, Any]:
+    _apply_search_env_overrides(data, settings)
+
     llm = data.get("llm")
     if not isinstance(llm, dict):
         # Leave it alone; validation will produce the proper error.
@@ -211,6 +261,72 @@ def _resolve_keys(
     return keys, availability
 
 
+def _resolve_search_keys(
+    config: EngineConfig, resolver: SecretResolver, *, strict: bool
+) -> tuple[dict[str, str], dict[str, ProfileAvailability]]:
+    """Same contract as `_resolve_keys`, for the SERP providers.
+
+    "In use" here means "in the failover chain". A provider configured but left out of the
+    chain (Brave, per the search-provider decision) may be keyless without complaint — it
+    is written and available, not wired.
+    """
+    keys: dict[str, str] = {}
+    availability: dict[str, ProfileAvailability] = {}
+    search = config.search
+    if search is None:
+        return keys, availability
+
+    in_use = set(search.chain)
+    for name, provider in search.providers.items():
+        if provider.api_key_ref is None:
+            availability[name] = ProfileAvailability(
+                name=name, available=True, in_use=name in in_use
+            )
+            continue
+
+        value = resolver.resolve(provider.api_key_ref)
+        if value:
+            keys[name] = value
+            availability[name] = ProfileAvailability(
+                name=name, available=True, in_use=name in in_use
+            )
+            continue
+
+        reason = (
+            f"secret {provider.api_key_ref!r} not found (looked in: "
+            f"{resolver.describe_sources(provider.api_key_ref)})"
+        )
+        if name in in_use and strict:
+            raise SecretMissing(
+                f"search provider {name!r} is in search.chain but its {reason}",
+                provider=name,
+                api_key_ref=provider.api_key_ref,
+            )
+        availability[name] = ProfileAvailability(
+            name=name, available=False, reason=reason, in_use=name in in_use
+        )
+
+    return keys, availability
+
+
+def _load_templates(config: EngineConfig, config_path: Path) -> tuple[TemplatesFile, Path | None]:
+    """Load the dork template bank, resolved relative to the instance config file.
+
+    A missing file is fatal rather than an empty bank: `discovery` being configured at all
+    means general discovery is expected to run, and a run that silently issues zero
+    queries looks identical to a run that found nothing.
+    """
+    if config.discovery is None:
+        return TemplatesFile(), None
+
+    path = (config_path.parent / config.discovery.templates_path).resolve()
+    data = _read_yaml(path)
+    try:
+        return TemplatesFile.model_validate(data), path
+    except ValidationError as exc:
+        raise ConfigError(_format_validation_error(path, exc), path=str(path)) from exc
+
+
 def load_config(
     path: Path | None = None,
     *,
@@ -238,7 +354,18 @@ def load_config(
         ) from exc
 
     keys, availability = _resolve_keys(config, resolver, strict=strict)
-    return LoadedConfig(config=config, path=config_path, api_keys=keys, availability=availability)
+    search_keys, search_availability = _resolve_search_keys(config, resolver, strict=strict)
+    templates, templates_path = _load_templates(config, config_path)
+    return LoadedConfig(
+        config=config,
+        path=config_path,
+        api_keys=keys,
+        availability=availability,
+        search_keys=search_keys,
+        search_availability=search_availability,
+        templates=templates,
+        templates_path=templates_path,
+    )
 
 
 @lru_cache(maxsize=1)
@@ -262,5 +389,18 @@ def redacted_config(loaded: LoadedConfig) -> dict[str, Any]:
         profile["_available"] = entry.available if entry else False
         profile["_unavailable_reason"] = entry.reason if entry else "not resolved"
         profile["_api_key_present"] = name in loaded.api_keys
+
+    for name, provider in (payload.get("search") or {}).get("providers", {}).items():
+        if provider.get("extra_params"):
+            provider["extra_params"] = {key: REDACTED for key in provider["extra_params"]}
+        entry = loaded.search_availability.get(name)
+        provider["_available"] = entry.available if entry else False
+        provider["_unavailable_reason"] = entry.reason if entry else "not resolved"
+        provider["_api_key_present"] = name in loaded.search_keys
+
     payload["_config_path"] = str(loaded.path)
+    payload["_templates_path"] = str(loaded.templates_path) if loaded.templates_path else None
+    payload["_templates"] = [
+        template.model_dump(mode="json") for template in loaded.templates.templates
+    ]
     return payload

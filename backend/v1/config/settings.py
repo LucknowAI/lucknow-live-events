@@ -23,7 +23,20 @@ class V1Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="V1_", env_file=".env", extra="ignore")
 
     CONFIG_PATH: Path = _DEFAULT_CONFIG
-    ENVIRONMENT: str = "development"  # development | staging | production
+
+    ENVIRONMENT: str = "production"  # development | staging | production
+    """Defaults to the **strict** setting, deliberately.
+
+    `development` relaxes real controls: missing API keys become warnings, the engine
+    token becomes optional, and in-memory spend ledgers are allowed. Defaulting to it
+    meant every production safety check was opt-in — deploy a container without setting
+    this variable and you get the permissive mode silently, which is the exact situation
+    those checks exist to prevent.
+
+    Fail-safe instead: an unconfigured process is strict and refuses to start until its
+    token and durable ledgers are set. Local work opts *down* by setting
+    `V1_ENVIRONMENT=development`, which `backend/.env.example` does on its first line."""
+
     SERVICE_NAME: str = "engine-v1"
 
     LOG_LEVEL: str = "INFO"
@@ -57,6 +70,23 @@ class V1Settings(BaseSettings):
     LLM_ALLOW_LIVE: bool = False
     """Guard for the live conformance run. `POST /llm/selftest?live=true` and the
     live-provider tests refuse to spend money unless this is explicitly on."""
+
+    # --- search (Phase 2) ---
+    SEARCH_FORCE_PROVIDER: str | None = None
+    """Collapses `search.chain` to this one provider. The way to run a whole discovery
+    pass on recorded fixtures without editing the YAML: `V1_SEARCH_FORCE_PROVIDER=fixture`.
+
+    Note it replaces the chain rather than reordering it. A "preferred provider" that still
+    falls back to the paid chain would defeat the purpose — the reason to force `fixture`
+    is precisely that nothing should reach the network."""
+
+    SEARCH_BUDGET_LEDGER: str | None = None  # memory | postgres
+    SEARCH_CACHE_BACKEND: str | None = None  # memory | postgres
+    SEARCH_FIXTURE_DIR: Path | None = None
+    SEARCH_ALLOW_LIVE: bool = False
+    """Second key for SERP spend, mirroring `LLM_ALLOW_LIVE`. A configured key alone is
+    not consent to spend it: keys end up in a shared `.env` and a discovery run issues
+    hundreds of queries without a human watching."""
 
     @property
     def is_development(self) -> bool:

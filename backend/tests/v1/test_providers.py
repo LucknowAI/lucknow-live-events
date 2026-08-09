@@ -136,11 +136,13 @@ async def test_recording_from_a_live_source_is_budgeted_and_billed(tmp_path: Pat
         profile=paid_profile(),
         api_key="k",
         budget=guard,
+        allow_live=True,
     )
     replay = FixtureProvider(
         name="fixtures",
         profile=LLMProfileConfig(adapter=AdapterKind.FIXTURE, fixture_dir=str(tmp_path)),
         budget=guard,
+        allow_live=True,
         record_from=source,
     )
 
@@ -189,11 +191,13 @@ async def test_recording_is_refused_when_the_budget_is_exhausted(tmp_path: Path)
         profile=paid_profile(),
         api_key="k",
         budget=guard,
+        allow_live=True,
     )
     replay = FixtureProvider(
         name="fixtures",
         profile=LLMProfileConfig(adapter=AdapterKind.FIXTURE, fixture_dir=str(tmp_path)),
         budget=guard,
+        allow_live=True,
         record_from=source,
     )
 

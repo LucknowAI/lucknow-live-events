@@ -91,6 +91,7 @@ def make_stub(
         profile=paid_profile(**profile_overrides),
         api_key="stub-key",
         budget=guard,
+        allow_live=True,
     )
     return provider, spend
 
@@ -337,6 +338,7 @@ async def test_spend_from_a_failed_call_counts_against_the_cap() -> None:
         profile=paid_profile(),
         api_key="k",
         budget=guard,
+        allow_live=True,
     )
 
     with pytest.raises(RateLimited):
@@ -394,6 +396,7 @@ async def test_exhausted_cap_halts_the_call_and_records_why() -> None:
         profile=paid_profile(),
         api_key="k",
         budget=guard,
+        allow_live=True,
     )
 
     with pytest.raises(BudgetExceeded) as exc:
@@ -418,6 +421,7 @@ async def test_degrade_policy_delegates_to_the_costless_fallback() -> None:
         name="fallback",
         profile=LLMProfileConfig(adapter=AdapterKind.MOCK),
         budget=guard,
+        allow_live=True,
     )
     provider = StubProvider(
         script=[RawCompletion(text=VALID_JSON)],
@@ -425,6 +429,7 @@ async def test_degrade_policy_delegates_to_the_costless_fallback() -> None:
         profile=paid_profile(),
         api_key="k",
         budget=guard,
+        allow_live=True,
         fallback=fallback,
     )
 

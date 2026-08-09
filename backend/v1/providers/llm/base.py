@@ -41,6 +41,7 @@ from tenacity import (
 from v1.config.schema import LLMProfileConfig
 from v1.contracts.errors import (
     BudgetExceeded,
+    LiveSpendNotPermitted,
     ProviderError,
     SchemaValidationFailed,
 )
@@ -137,6 +138,7 @@ class BaseLLMProvider(ABC):
         api_key: str | None = None,
         budget: BudgetGuard | None = None,
         fallback: BaseLLMProvider | None = None,
+        allow_live: bool = False,
     ) -> None:
         self.name = name
         self.profile = profile
@@ -144,6 +146,7 @@ class BaseLLMProvider(ABC):
         self._api_key = api_key
         self._budget = budget
         self._fallback = fallback
+        self._allow_live = allow_live
         self.capabilities = LLMCapabilities(
             structured_output=profile.structured_output,
             supports_tools=profile.supports_tools,
@@ -203,6 +206,8 @@ class BaseLLMProvider(ABC):
                     untrusted_content=untrusted_content,
                 )
 
+            self._assert_live_spend_permitted()
+
             result_value, raw_text, outcome = await self._run_attempts(
                 system=system,
                 user=user,
@@ -229,6 +234,10 @@ class BaseLLMProvider(ABC):
             )
         except SchemaValidationFailed as exc:
             outcome = CallOutcome.SCHEMA_FAILED
+            error_type, error_message = exc.code, exc.message
+            raise
+        except LiveSpendNotPermitted as exc:
+            outcome = CallOutcome.SPEND_NOT_PERMITTED
             error_type, error_message = exc.code, exc.message
             raise
         except BudgetExceeded as exc:
@@ -278,6 +287,8 @@ class BaseLLMProvider(ABC):
         error_message: str | None = None
 
         try:
+            self._assert_live_spend_permitted()
+
             if self._budget is not None and self.profile.is_paid:
                 status = await self._budget.check(profile=self.name, task=task)
                 if status.verdict is BudgetVerdict.DEGRADE:
@@ -294,6 +305,10 @@ class BaseLLMProvider(ABC):
             meter.add(self._ensure_usage(raw, call.system, call.turns))
             outcome = CallOutcome.OK
             return raw
+        except LiveSpendNotPermitted as exc:
+            outcome = CallOutcome.SPEND_NOT_PERMITTED
+            error_type, error_message = exc.code, exc.message
+            raise
         except BudgetExceeded as exc:
             outcome = CallOutcome.BUDGET_BLOCKED
             error_type, error_message = exc.code, exc.message
@@ -318,6 +333,28 @@ class BaseLLMProvider(ABC):
             )
 
     # ----------------------------------------------------------------- funnel pieces
+
+    def _assert_live_spend_permitted(self) -> None:
+        """Refuse to spend real money unless this process explicitly opted in.
+
+        A resolved API key is **not** consent. Keys live in shared `.env` files and are
+        inherited by every shell, test runner and container on the machine. This is the
+        switch that has to be set deliberately (`V1_LLM_ALLOW_LIVE`).
+
+        Checked *after* the degrade decision — degrading to a fixture costs nothing and
+        should still work — and *before* the budget check, because "this process may not
+        spend at all" is a stronger statement than "the cap is reached".
+        """
+        if not self.profile.is_paid or self._allow_live:
+            return
+        raise LiveSpendNotPermitted(
+            f"LLM profile {self.name!r} ({self.adapter}, {self.model}) costs money and "
+            "V1_LLM_ALLOW_LIVE is not set. A configured API key is not consent to spend "
+            "it. Set V1_LLM_ALLOW_LIVE=1 to permit live calls, or run with "
+            "V1_LLM_FORCE_PROFILE pointing at a local or fixture profile",
+            profile=self.name,
+            adapter=self.adapter,
+        )
 
     async def _maybe_degrade(self, *, task: str) -> BaseLLMProvider | None:
         """Budget gate. Returns a fallback provider when the policy is to degrade."""

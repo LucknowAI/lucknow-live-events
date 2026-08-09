@@ -180,6 +180,7 @@ class LLMRegistry:
             profile=profile,
             api_key=self._loaded.api_key_for(name),
             budget=self._budget,
+            allow_live=self._allow_live,
         )
 
     # ------------------------------------------------------------------------ lookup
