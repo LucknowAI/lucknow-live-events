@@ -102,7 +102,7 @@ async def _async_process(
                 "source_id": source.id,
             }
 
-        published = result.get("published", 0)
+        published = result.get("events_published", 0)
 
         # ── Step 4: Keep source enabled for future hourly crawls if event published ─
         if published >= 1:
