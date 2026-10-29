@@ -180,38 +180,3 @@ class StatsOut(BaseModel):
     pending_moderation: int
     sources_active: int
     sources_blacklisted: int = 0
-
-
-# ─── Crawl runs ───────────────────────────────────────────────────────────────
-
-class CrawlRunOut(BaseModel):
-    id: str
-    source_id: str
-    started_at: datetime
-    finished_at: datetime | None
-    status: str | None
-    events_found: int
-    events_new: int
-    events_published: int
-    error_summary: str | None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-    @field_validator("id", "source_id", mode="before")
-    @classmethod
-    def _ids_to_str(cls, v: Any) -> str:
-        return _coerce_uuid(v)
-
-
-# ─── Discovery ────────────────────────────────────────────────────────────────
-
-class DiscoveryRunRequest(BaseModel):
-    custom_queries: list[str] | None = None
-
-
-class DiscoveryRunResult(BaseModel):
-    task_id: str
-    status: str = "queued"
-    message: str = "Discovery agent has been triggered"

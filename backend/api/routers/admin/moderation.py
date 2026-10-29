@@ -25,6 +25,14 @@ async def list_pending(admin: Admin, db: AsyncSession = Depends(get_db)):
     return await admin_service.list_pending_moderation(db)
 
 
+# ─── Event link submissions ───────────────────────────────────────────────────
+
+@router.get("/submissions", response_model=list[dict])
+async def list_event_submissions(admin: Admin, db: AsyncSession = Depends(get_db)):
+    """Pending event links submitted by the public."""
+    return await admin_service.list_pending_event_submissions(db)
+
+
 # ─── Community Submissions ────────────────────────────────────────────────────
 
 class CommunitySubmissionOut(BaseModel):

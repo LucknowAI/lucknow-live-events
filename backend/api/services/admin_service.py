@@ -6,7 +6,6 @@ from typing import Any
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.models.crawl import CrawlRun
 from api.models.event import Event
 from api.models.raw_event import RawEvent
 from api.models.moderation import ModerationQueueItem
@@ -79,11 +78,6 @@ async def delete_source(db: AsyncSession, source_id: str) -> bool:
     await db.delete(src)
     await db.commit()
     return True
-
-
-async def list_crawl_runs(db: AsyncSession, limit: int = 50) -> list[CrawlRun]:
-    res = await db.execute(select(CrawlRun).order_by(CrawlRun.started_at.desc()).limit(limit))
-    return res.scalars().all()
 
 
 # ─── Moderation ──────────────────────────────────────────────────────────────
@@ -193,15 +187,6 @@ async def list_all_events(
     return list(items), int(total)
 
 
-async def get_bad_date_events(db: AsyncSession) -> tuple[list[Event], int]:
-    """Return events with junk placeholder dates (start_at > year 2050)."""
-    from datetime import timezone
-    sentinel = datetime(year=2050, month=1, day=1, tzinfo=timezone.utc)
-    res = await db.execute(select(Event).where(Event.start_at > sentinel))
-    items = res.scalars().all()
-    return list(items), len(items)
-
-
 async def update_event(db: AsyncSession, event_id: str, data: dict[str, Any]) -> Event | None:
     """Full update of event data from admin."""
     ev = await db.get(Event, event_id)
@@ -298,6 +283,22 @@ async def get_stats(db: AsyncSession) -> dict:
         "sources_active": int(sources_active),
         "sources_blacklisted": int(sources_blacklisted),
     }
+
+
+async def list_pending_event_submissions(db: AsyncSession) -> list[dict]:
+    """Event links submitted by the public, oldest first."""
+    res = await db.execute(
+        select(ManualSubmission)
+        .where(
+            (ManualSubmission.submission_type == "event")
+            & (ManualSubmission.status == "pending")
+        )
+        .order_by(ManualSubmission.created_at.asc())
+    )
+    return [
+        {"id": str(item.id), "event_url": item.event_url, "created_at": item.created_at}
+        for item in res.scalars().all()
+    ]
 
 
 # ─── Community Submissions (admin moderation) ─────────────────────────────────

@@ -18,26 +18,10 @@ async def create_submission(
         submitter_name=submitter_name,
         submitter_email=submitter_email,
         notes=notes,
+        status="pending",
     )
     db.add(submission)
-    await db.flush()
-
-    # Immediately process the URL via the ingestion pipeline.
-    # The task will mark the submission accepted/skipped/needs_review.
-    submission.status = "queued"
+    # Stored for admin review only; nothing processes it yet.
     await db.commit()
     await db.refresh(submission)
-
-    try:
-        from workers.celery_app import celery_app
-
-        celery_app.send_task(
-            "workers.tasks.submissions.process_manual_submission",
-            args=[str(submission.id), event_url],
-        )
-    except Exception:
-        # If celery isn't running, keep it queued so it can be retried later.
-        pass
-
     return submission
-
