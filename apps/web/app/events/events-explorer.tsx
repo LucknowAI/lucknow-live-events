@@ -3,14 +3,19 @@
 import { EventCard } from "@/components/EventCard";
 import { EventGridSkeleton } from "@/components/EventGridSkeleton";
 import { eventService, facetService, type EventsResponse, type FacetItem } from "@/lib/api";
-import { buildEventsHref, searchParamsToEventQuery } from "@/lib/events-query";
+import { buildEventsHref, eventStatusFromSearchParams, searchParamsToEventQuery } from "@/lib/events-query";
 import { ChevronLeft, ChevronRight, Loader2, Search, SlidersHorizontal, ChevronDown, MapPin, Users, Tag, MonitorPlay } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback } from "react";
 import useSWR from "swr";
 
 const emptyResponse: EventsResponse = { items: [], total: 0, page: 1, limit: 20 };
+const views = [
+  { status: "upcoming", label: "Upcoming", empty: "No upcoming events" },
+  { status: "ongoing", label: "Happening now", empty: "No events happening now" },
+  { status: "past", label: "Past", empty: "No events in the past 30 days" },
+] as const;
 
 async function fetchEvents(qs: string): Promise<EventsResponse> {
   const params = searchParamsToEventQuery(new URLSearchParams(qs));
@@ -19,15 +24,16 @@ async function fetchEvents(qs: string): Promise<EventsResponse> {
 
 export function EventsExplorer() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const queryKey = searchParams.toString();
+  const status = eventStatusFromSearchParams(searchParams);
+  const view = views.find((item) => item.status === status) ?? views[0];
 
-  const { data, error, isLoading, isValidating } = useSWR(
+  const { data, error, isLoading, isValidating, mutate } = useSWR(
     ["events", queryKey],
     ([, qs]) => fetchEvents(qs),
     {
       revalidateOnFocus: false,
-      keepPreviousData: true,
+      keepPreviousData: false,
     },
   );
 
@@ -45,46 +51,28 @@ export function EventsExplorer() {
     { revalidateOnFocus: false },
   );
 
-  // Past events (last 30 days) — always flat, no pagination
-  const { data: pastEvents = [] } = useSWR(
-    "events-past",
-    () => eventService.getPastEvents(30),
-    { revalidateOnFocus: false },
-  );
-  const [pastExpanded, setPastExpanded] = useState(false);
-
   const response = data ?? emptyResponse;
   const { items, total, page, limit } = response;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
-  const filterBase: Record<string, string | undefined> = {
-    q: searchParams.get("q") ?? undefined,
-    topic: searchParams.get("topic") ?? undefined,
-    locality: searchParams.get("locality") ?? undefined,
-    community: searchParams.get("community") ?? undefined,
-    mode: searchParams.get("mode") ?? undefined,
-  };
-
-  const hasActiveFilters =
-    !!(
-      filterBase.q ||
-      filterBase.topic ||
-      filterBase.locality ||
-      filterBase.community ||
-      filterBase.mode
-    ) ||
-    (searchParams.get("page") && Number(searchParams.get("page")) > 1);
+  const filterBase: Record<string, string | undefined> = Object.fromEntries(searchParams.entries());
+  const hasActiveFilters = Array.from(searchParams.keys()).some((key) => key !== "status");
 
   const replaceQuery = useCallback(
     (mutate: (sp: URLSearchParams) => void) => {
-      const sp = new URLSearchParams(searchParams.toString());
+      const sp = new URLSearchParams(window.location.search);
       mutate(sp);
       sp.delete("page");
       const s = sp.toString();
-      router.replace(s ? `/events?${s}` : "/events", { scroll: false });
+      // Filters are client-only; native history keeps useSearchParams in sync.
+      window.history.replaceState(null, "", s ? `/events?${s}` : "/events");
     },
-    [router, searchParams],
+    [],
   );
+
+  const clearFilters = () => replaceQuery((sp) => {
+    Array.from(sp.keys()).forEach((key) => { if (key !== "status") sp.delete(key); });
+  });
 
   const applySearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -218,12 +206,24 @@ export function EventsExplorer() {
             </div>
           </div>
 
+          <nav aria-label="Event views" className="mt-4 flex gap-2">
+            {views.map((item) => (
+              <Link key={item.status}
+                href={buildEventsHref(filterBase, { status: item.status, page: null })}
+                scroll={false} aria-current={status === item.status ? "page" : undefined}
+                className={`rounded-full px-4 py-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${status === item.status ? "bg-primary text-primary-foreground" : "border border-border hover:bg-muted"}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
           <div className="flex items-center justify-end mt-4">
             <div className="flex items-center gap-4">
               {hasActiveFilters && (
                 <button
                   type="button"
-                  onClick={() => replaceQuery((sp) => Array.from(sp.keys()).forEach(k => sp.delete(k)))}
+                  onClick={clearFilters}
                   className="text-[13px] font-bold text-muted-foreground hover:text-destructive transition-colors hidden sm:block"
                 >
                   Clear Filters
@@ -231,7 +231,7 @@ export function EventsExplorer() {
               )}
               <div className="flex items-center gap-2">
                 {isValidating && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
-                <span className="text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{total} results</span>
+                <span aria-live="polite" className="text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{error ? "Results unavailable" : isLoading ? "Loading events" : `${total} results`}</span>
               </div>
             </div>
           </div>
@@ -239,14 +239,15 @@ export function EventsExplorer() {
       </div>
 
       {/* Main Grid Area */}
-      <div className="flex-1 w-full max-w-screen-2xl mx-auto p-6 lg:p-10">
+      <div aria-busy={isLoading || isValidating} className="flex-1 w-full max-w-screen-2xl mx-auto p-6 lg:p-10">
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium rounded-xl p-4 mb-6">
-            Could not load events. Check your connection or API URL.
+          <div role="alert" className="bg-destructive/10 border border-destructive/20 text-foreground text-sm font-medium rounded-xl p-4 mb-6">
+            Could not load events. Please try again.
+            <button onClick={() => void mutate()} className="ml-3 underline font-bold">Try again</button>
           </div>
         )}
 
-        {isLoading && !data ? (
+        {!error && (isLoading && !data ? (
           <EventGridSkeleton count={8} />
         ) : items.length > 0 ? (
           <>
@@ -296,49 +297,18 @@ export function EventsExplorer() {
       ) : (
         <div className="rounded-2xl border border-dashed border-border py-28 text-center flex flex-col items-center bg-card shadow-sm mt-8 mx-auto max-w-2xl">
           <Search className="w-16 h-16 text-muted mb-6" />
-          <h3 className="text-2xl font-extrabold mb-3">No matching events</h3>
+          <h3 className="text-2xl font-extrabold mb-3">{hasActiveFilters ? "No matching events" : view.empty}</h3>
           <p className="text-muted-foreground mb-10 max-w-md mx-auto">
-            We couldn&apos;t find any events matching your specific filters. Try broadening your search or tweaking the mode!
+            {hasActiveFilters ? "Try broadening your search or changing your filters." : status === "past" ? "Completed events from the last 30 days will appear here." : "Check back soon for more community events."}
           </p>
-          <button
-            onClick={() => replaceQuery((sp) => Array.from(sp.keys()).forEach(k => sp.delete(k)))}
+          {hasActiveFilters && <button
+            onClick={clearFilters}
             className="rounded-full bg-secondary text-foreground text-sm border border-border px-8 py-3 font-bold hover:bg-muted transition-all"
           >
             Reset Filters
-          </button>
+          </button>}
         </div>
-      )}
-
-      {/* ── Completed Events ─────────────────────────────────────────────── */}
-      {pastEvents.length > 0 && (
-        <div className="mt-16 border-t border-border/50 pt-10">
-          <button
-            id="completed-events-toggle"
-            onClick={() => setPastExpanded((v) => !v)}
-            className="flex items-center gap-3 mb-6 group w-full text-left"
-          >
-            <h2 className="text-lg font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-              ✓ Completed Events
-            </h2>
-            <span className="text-xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground font-semibold">
-              {pastEvents.length}
-            </span>
-            <ChevronDown
-              className={`h-4 w-4 ml-auto text-muted-foreground transition-transform duration-200 ${
-                pastExpanded ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {pastExpanded && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {pastEvents.map((event) => (
-                <EventCard key={event.id} event={event} isPast />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      ))}
     </div>
   </div>
   );

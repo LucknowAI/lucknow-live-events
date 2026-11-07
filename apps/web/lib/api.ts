@@ -25,10 +25,13 @@ function resolveBaseUrl(): string {
   return url;
 }
 
+export type EventStatus = "upcoming" | "ongoing" | "past";
+
 export interface Event {
   id: string;
   slug: string;
   title: string;
+  status: EventStatus;
   start_at: string;
   end_at: string | null;
   venue_name: string | null;

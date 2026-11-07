@@ -6,7 +6,7 @@ import Image from "next/image";
 const topicLabel = (t: unknown): string =>
   typeof t === "string" ? t : (t as any)?.name ?? String(t);
 
-export function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }) {
+export function EventCard({ event, isPast = event.status === "past" }: { event: Event; isPast?: boolean }) {
   const targetUrl = event.registration_url || event.canonical_url;
 
   return (
@@ -39,6 +39,11 @@ export function EventCard({ event, isPast = false }: { event: Event; isPast?: bo
 
       <div className="flex flex-1 flex-col p-5">
         <div className="mb-3 flex items-center gap-2 flex-wrap">
+          {event.status === "ongoing" && (
+            <span className="inline-flex rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
+              Happening now
+            </span>
+          )}
           {event.event_type && (
             <span className="inline-flex rounded-full border border-border bg-background px-2 py-0.5 text-xs font-semibold text-muted-foreground capitalize">
               {event.event_type}
