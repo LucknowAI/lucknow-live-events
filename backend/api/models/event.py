@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Boolean, Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Float, ForeignKey, Index, String, Text, UniqueConstraint, case
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
 
@@ -30,6 +30,14 @@ class Event(Base):
 
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Read-time SQL expression, not a stored column. NOW is stable within the request transaction.
+    status: Mapped[str] = column_property(
+        case(
+            (start_at > func.now(), "upcoming"),
+            (func.coalesce(end_at, start_at + timedelta(days=1)) < func.now(), "past"),
+            else_="ongoing",
+        )
+    )
     timezone: Mapped[str] = mapped_column(String(100), nullable=False, server_default="Asia/Kolkata")
     city: Mapped[str] = mapped_column(String(100), nullable=False, server_default="Lucknow")
     locality: Mapped[str | None] = mapped_column(String(200))

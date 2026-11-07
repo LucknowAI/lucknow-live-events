@@ -6,9 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.database import get_db
-from api.schemas.event import EventDetailResponse, EventListResponse
+from api.schemas.event import EventDetailResponse, EventListResponse, EventStatus
 from api.services import event_service
-
 
 router = APIRouter()
 
@@ -25,6 +24,8 @@ async def list_events(
     community: str | None = None,
     is_free: bool | None = None,
     is_student_friendly: bool | None = None,
+    status: EventStatus | None = None,
+    past_days: int | None = Query(None, ge=1, le=90, description="Optional window for past events"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -41,6 +42,8 @@ async def list_events(
         community=community,
         is_free=is_free,
         is_student_friendly=is_student_friendly,
+        status=status,
+        past_days=past_days,
         page=page,
         limit=limit,
     )

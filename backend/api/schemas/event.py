@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+EventStatus = Literal["upcoming", "ongoing", "past"]
 
 
 class EventBase(BaseModel):
@@ -13,6 +15,7 @@ class EventBase(BaseModel):
     id: UUID
     slug: str
     title: str
+    status: EventStatus
     description: str | None = None
     short_description: str | None = None
 
