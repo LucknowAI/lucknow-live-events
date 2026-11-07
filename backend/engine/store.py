@@ -97,7 +97,9 @@ async def save(
                 update(Event)
                 .where(Event.source_platform == source.platform, Event.external_id.in_(listed_ids))
                 # Setting updated_at to itself skips its onupdate: being seen is not an edit.
-                .values(last_seen_at=run.started_at, updated_at=Event.updated_at)
+                # expires_at=None shows a returning event again. Admin cannot set
+                # expires_at; is_cancelled is left alone.
+                .values(last_seen_at=run.started_at, expires_at=None, updated_at=Event.updated_at)
             )
         await session.commit()
     except Exception:

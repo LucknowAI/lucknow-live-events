@@ -4,7 +4,6 @@ from celery import Celery
 
 from api.core.config import settings
 
-
 celery_app = Celery("lucknow_events")
 celery_app.conf.update(
     broker_url=settings.REDIS_URL,
@@ -17,13 +16,14 @@ celery_app.conf.update(
     task_default_queue="default",
 )
 
-celery_app.autodiscover_tasks([
-    "workers.tasks.crawl",
-    "workers.tasks.feeds",
-])
+celery_app.autodiscover_tasks(
+    [
+        "workers.tasks.feeds",
+    ]
+)
 
 # Celery Beat schedule lives here (import side-effect).
-from workers.schedules import CELERYBEAT_SCHEDULE  # noqa: E402
+from workers.schedules import CELERYBEAT_SCHEDULE
 
 celery_app.conf.beat_schedule = CELERYBEAT_SCHEDULE
 
@@ -31,4 +31,3 @@ celery_app.conf.beat_schedule = CELERYBEAT_SCHEDULE
 @celery_app.task(name="workers.tasks.debug.ping")
 def ping() -> str:
     return "pong"
-

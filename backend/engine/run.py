@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.models.event import Event
 from api.models.ingest import IngestRun
 from api.models.source import Source
-from engine import delta, http, rules, store
+from engine import cleanup, delta, http, rules, store
 from engine.sources import REGISTRY
 from engine.sources.base import Rejection
 
@@ -77,6 +77,13 @@ async def _run(session: AsyncSession, platform: str | None, dry_run: bool, ping:
             if source is None:
                 continue
             if await _source(session, source, dry_run) != "success":
+                failed = True
+        if not dry_run:
+            try:
+                await cleanup.apply(session)
+            except Exception:  # saved events must stay if cleanup fails
+                await session.rollback()
+                log.exception("engine.cleanup")
                 failed = True
         if ping and not dry_run:
             await _ping(failed)

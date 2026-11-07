@@ -8,9 +8,4 @@ CELERYBEAT_SCHEDULE = {
         "task": "workers.tasks.feeds.rebuild_all_feeds",
         "schedule": crontab(minute="*/30"),
     },
-    # Expire events that ended >48h ago — runs daily at 3 AM IST
-    "expire-past-events-daily": {
-        "task": "workers.tasks.crawl.expire_past_events",
-        "schedule": crontab(hour=3, minute=0),
-    },
 }
