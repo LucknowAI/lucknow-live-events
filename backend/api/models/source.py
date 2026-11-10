@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from api.models.base import Base, uuid_pk
@@ -34,8 +34,3 @@ class Source(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-
-    raw_events = relationship("RawEvent", back_populates="source")
-    crawl_runs = relationship("CrawlRun", back_populates="source")
-
-
