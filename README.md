@@ -171,7 +171,7 @@ export TEST_DATABASE_URL='postgresql+asyncpg://user:YOUR_LOCAL_PASSWORD@localhos
 make test
 ~~~
 
-`make test` runs `uv run --frozen pytest` from `backend/` and expects `TEST_DATABASE_URL` to use `postgresql+asyncpg` and a database name ending in `_test`. Alembic initializes the test schema and tests roll back their transactions. Pass extra arguments with `make test TEST_ARGS='-v'`. For formatting and lint checks, run `cd backend && uv run --frozen ruff check .` and `uv run --frozen ruff format --check .`.
+`make test` runs `uv run --frozen pytest` from `backend/` and expects `TEST_DATABASE_URL` to use `postgresql+asyncpg` and a database name ending in `_test`. Alembic initializes the test schema and tests roll back their transactions. Pass extra arguments with `make test TEST_ARGS='-v'`. For formatting and lint checks, run `cd backend && uvx ruff check .` and `uvx ruff format --check .`.
 
 ---
 
@@ -449,7 +449,7 @@ Runs record success or failure in `ingest_runs`. A source that fails does not ma
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for assignment, coding and review guidelines. All PRs must target **`develop`**. Claim an issue before starting, keep one issue per PR, and use a `docs/`, `feat/`, `fix/` or other conventional branch name.
 
-- Backend: `cd backend && uv run --frozen ruff check . && uv run --frozen ruff format --check .`, then run the tests with the dedicated test database described above.
+- Backend: `cd backend && uvx ruff check . && uvx ruff format --check .`, then run the tests with the dedicated test database described above.
 - Frontend: `cd apps/web && pnpm install && pnpm lint && pnpm build`.
 - Adapter changes: include recorded fixtures and offline tests. Never commit secrets or private environment files.
 
