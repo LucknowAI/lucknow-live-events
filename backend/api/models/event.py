@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlalchemy import Boolean, Float, ForeignKey, Index, String, Text, UniqueConstraint, case
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
-from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
+from sqlalchemy.orm import Mapped, column_property, mapped_column
 from sqlalchemy.sql import func
 from sqlalchemy.types import DateTime
 
@@ -77,7 +77,6 @@ class Event(Base):
     relevance_score: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.0")
     publish_score: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.0")
 
-    raw_event_id: Mapped[str | None] = mapped_column(ForeignKey("raw_events.id"))
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -89,8 +88,6 @@ class Event(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-
-    raw_event = relationship("RawEvent", back_populates="event")
 
 
 Index("idx_events_search", Event.search_vector, postgresql_using="gin")
