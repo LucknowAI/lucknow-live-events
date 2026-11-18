@@ -445,13 +445,25 @@ Runs record success or failure in `ingest_runs`. A source that fails does not ma
 
 ---
 
-## Contributing
+## How to contribute
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for assignment, coding and review guidelines. All PRs must target **`develop`**. Claim an issue before starting, keep one issue per PR, and use a `docs/`, `feat/`, `fix/` or other conventional branch name.
+Bug fixes, documentation improvements and new platform adapters are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guidelines.
 
-- Backend: `cd backend && uvx ruff check . && uvx ruff format --check .`, then run the tests with the dedicated test database described above.
-- Frontend: `cd apps/web && pnpm install && pnpm lint && pnpm build`.
-- Adapter changes: include recorded fixtures and offline tests. Never commit secrets or private environment files.
+1. **Choose an issue.** Find an unassigned [open issue](https://github.com/LucknowAI/lucknow-live-events/issues), or open one describing your proposed change. Comment to request it and wait for a maintainer to assign you before starting.
+2. **Fork and branch from `develop`.** Replace `YOUR_USERNAME` with your GitHub username and choose a descriptive `docs/`, `feat/` or `fix/` branch name:
+
+   ~~~bash
+   git clone --branch develop https://github.com/YOUR_USERNAME/lucknow-live-events.git
+   cd lucknow-live-events
+   git remote add upstream https://github.com/LucknowAI/lucknow-live-events.git
+   git fetch upstream
+   git switch -c feat/your-change upstream/develop
+   ~~~
+
+3. **Set up and make a focused change.** Follow [Local development](#local-development) and address one issue per PR. Include regression coverage; adapter changes need recorded fixtures and offline tests. Never commit secrets or private environment files.
+4. **Run the relevant checks.** For backend changes, run `cd backend && uvx ruff check . && uvx ruff format --check .`, then follow [Backend tests](#backend-tests) to run tests with a dedicated test database. For frontend changes, run `cd apps/web && pnpm install && pnpm lint && pnpm format && pnpm build` from the repository root.
+5. **Commit and push to your fork.** Use [Conventional Commits](CONTRIBUTING.md#commit-messages), then push your branch, for example: `git push -u origin feat/your-change`.
+6. **Open a PR against `LucknowAI/lucknow-live-events:develop`.** Fill in the [PR template](.github/pull_request_template.md), describe what changed and how you verified it, and link the assigned issue with `Closes #<number>`. Respond to review feedback on the same branch.
 
 The initial source list is not the canonical registry of supported platforms. Check [`backend/engine/sources/__init__.py`](backend/engine/sources/__init__.py) when documenting or using the engine.
 
