@@ -1,30 +1,16 @@
 "use client";
 
 import { adminService } from "@/lib/admin-api";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-const SECRET_KEY = "wakandaforever";
-
-function LoginPageInner() {
+export default function MissionControlLoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const key = searchParams.get("key");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Gate: if key is wrong, show 404-like page
-  if (key !== SECRET_KEY) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground">
-        <h1 className="text-6xl font-extrabold text-muted-foreground/30">404</h1>
-        <p className="text-muted-foreground mt-4">Page not found.</p>
-      </div>
-    );
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,9 +19,9 @@ function LoginPageInner() {
     try {
       const { access_token } = await adminService.login(email, password);
       localStorage.setItem("admin_token", access_token);
-      router.replace(`/mission-control?key=${SECRET_KEY}`);
+      router.replace("/mission-control");
     } catch {
-      setError("Invalid credentials. Check your .env ADMIN_EMAIL and ADMIN_PASSWORD_HASH.");
+      setError("Invalid credentials or admin not configured.");
     } finally {
       setLoading(false);
     }
@@ -84,13 +70,5 @@ function LoginPageInner() {
         </form>
       </div>
     </div>
-  );
-}
-
-export default function MissionControlLoginPage() {
-  return (
-    <Suspense>
-      <LoginPageInner />
-    </Suspense>
   );
 }

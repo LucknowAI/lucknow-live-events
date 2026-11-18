@@ -144,34 +144,6 @@ class EventUpdate(BaseModel):
     is_cancelled: bool | None = None
 
 
-# ─── Moderation ───────────────────────────────────────────────────────────────
-
-class ModerationItemOut(BaseModel):
-    id: str
-    entity_type: str | None
-    entity_id: str | None
-    reason: str | None
-    severity: str | None
-    status: str
-    ai_verdict: dict[str, Any] | None
-    notes: str | None
-    created_at: datetime
-    # Enriched preview fields (from the related raw_event / event record)
-    preview_title: str | None = None
-    preview_url: str | None = None
-    preview_community: str | None = None
-    preview_confidence: float | None = None
-
-    class Config:
-        from_attributes = True
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def _id_to_str(cls, v: Any) -> str:
-        return _coerce_uuid(v)
-
-
-
 # ─── Stats ────────────────────────────────────────────────────────────────────
 
 class StatsOut(BaseModel):
@@ -180,38 +152,3 @@ class StatsOut(BaseModel):
     pending_moderation: int
     sources_active: int
     sources_blacklisted: int = 0
-
-
-# ─── Crawl runs ───────────────────────────────────────────────────────────────
-
-class CrawlRunOut(BaseModel):
-    id: str
-    source_id: str
-    started_at: datetime
-    finished_at: datetime | None
-    status: str | None
-    events_found: int
-    events_new: int
-    events_published: int
-    error_summary: str | None
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-    @field_validator("id", "source_id", mode="before")
-    @classmethod
-    def _ids_to_str(cls, v: Any) -> str:
-        return _coerce_uuid(v)
-
-
-# ─── Discovery ────────────────────────────────────────────────────────────────
-
-class DiscoveryRunRequest(BaseModel):
-    custom_queries: list[str] | None = None
-
-
-class DiscoveryRunResult(BaseModel):
-    task_id: str
-    status: str = "queued"
-    message: str = "Discovery agent has been triggered"

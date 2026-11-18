@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminService, type AdminSource, type CrawlRun } from "@/lib/admin-api";
-import { Loader2, Play, PlayCircle, Plus, Trash2, Shield, ShieldOff, ShieldCheck, X, History } from "lucide-react";
+import { adminService, type AdminSource } from "@/lib/admin-api";
+import { Loader2, Plus, Trash2, Shield, ShieldOff, ShieldCheck, X } from "lucide-react";
 
 const STATUS_CONFIG = {
   active: { label: "Active", color: "bg-green-500/10 text-green-600" },
@@ -70,39 +70,25 @@ export function SourcesTab() {
   const [loading, setLoading] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [taskMsg, setTaskMsg] = useState("");
-  const [crawlHistory, setCrawlHistory] = useState<CrawlRun[]>([]);
-
-  async function load() {
-    setLoading(true);
-    const [data, runs] = await Promise.all([
-      adminService.listSources().catch(() => [] as AdminSource[]),
-      adminService.crawlRuns().catch(() => [] as CrawlRun[]),
-    ]);
-    setSources(data);
-    setCrawlHistory(runs.slice(0, 15));
-    setLoading(false);
-  }
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(async () => {
+      if (!active) return;
+      setLoading(true);
+      const data = await adminService.listSources().catch(() => [] as AdminSource[]);
+      if (active) {
+        setSources(data);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   async function setStatus(id: string, status: "active" | "whitelisted" | "blacklisted") {
     setActionId(id);
     const updated = await adminService.setSourceStatus(id, status).catch(() => null);
     if (updated) setSources((list) => list.map((s) => s.id === id ? updated : s));
     setActionId(null);
-  }
-
-  async function crawl(id: string) {
-    setActionId(id);
-    const r = await adminService.triggerCrawl(id).catch(() => null);
-    if (r) setTaskMsg(`Crawl queued: task ${r.task_id.slice(0, 8)}…`);
-    setActionId(null);
-  }
-
-  async function crawlAll() {
-    const r = await adminService.triggerAll().catch(() => null);
-    if (r) setTaskMsg(`Full crawl queued: task ${r.task_id.slice(0, 8)}…`);
   }
 
   async function deleteSource(id: string) {
@@ -118,10 +104,6 @@ export function SourcesTab() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-extrabold text-base">{sources.length} Sources</h2>
         <div className="flex gap-2">
-          {taskMsg && <span className="text-xs text-primary font-semibold">{taskMsg}</span>}
-          <button onClick={crawlAll} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-bold hover:bg-muted transition-colors">
-            <PlayCircle className="w-4 h-4" /> Crawl All
-          </button>
           <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold">
             <Plus className="w-4 h-4" /> Add Source
           </button>
@@ -131,7 +113,7 @@ export function SourcesTab() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="rounded-xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
@@ -170,10 +152,7 @@ export function SourcesTab() {
                       {src.last_crawled_at ? new Date(src.last_crawled_at).toLocaleDateString("en-IN") : "Never"}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => crawl(src.id)} disabled={actionId === src.id} title="Crawl now" className="p-1.5 rounded-lg hover:bg-muted">
-                          <Play className="w-3.5 h-3.5" />
-                        </button>
+                      <div className="flex items-center gap-1 justify-end opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                         {src.status !== "whitelisted" && (
                           <button onClick={() => setStatus(src.id, "whitelisted")} disabled={actionId === src.id} title="Whitelist" className="p-1.5 rounded-lg hover:bg-blue-500/10">
                             <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
@@ -204,67 +183,6 @@ export function SourcesTab() {
 
       {showAdd && <AddSourceModal onClose={() => setShowAdd(false)} onAdded={(s) => { setSources((list) => [s, ...list]); setShowAdd(false); }} />}
 
-      {/* Crawl Run History */}
-      {crawlHistory.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center gap-2 mb-3">
-            <History className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-extrabold text-sm">Recent Crawl Runs</h3>
-          </div>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase">Status</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase hidden md:table-cell">Started</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase">Found</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase hidden lg:table-cell">New</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase hidden lg:table-cell">Published</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase hidden xl:table-cell">Error</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {crawlHistory.map((run) => {
-                  const statusColor =
-                    run.status === "success" ? "bg-green-500/10 text-green-600" :
-                    run.status === "error" ? "bg-destructive/10 text-destructive" :
-                    run.status === "running" ? "bg-blue-500/10 text-blue-600" :
-                    "bg-muted text-muted-foreground";
-
-                  const durationMs = run.finished_at
-                    ? new Date(run.finished_at).getTime() - new Date(run.started_at).getTime()
-                    : null;
-                  const duration = durationMs != null
-                    ? durationMs > 60000 ? `${Math.round(durationMs / 60000)}m` : `${Math.round(durationMs / 1000)}s`
-                    : "—";
-
-                  return (
-                    <tr key={run.id} className="hover:bg-muted/10 transition-colors">
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase ${statusColor}`}>
-                            {run.status ?? "unknown"}
-                          </span>
-                          <span className="text-xs text-muted-foreground hidden sm:inline">{duration}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 hidden md:table-cell text-xs text-muted-foreground">
-                        {new Date(run.started_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </td>
-                      <td className="px-4 py-2.5 font-semibold text-sm">{run.events_found}</td>
-                      <td className="px-4 py-2.5 hidden lg:table-cell text-green-600 font-semibold text-sm">+{run.events_new}</td>
-                      <td className="px-4 py-2.5 hidden lg:table-cell text-primary font-semibold text-sm">{run.events_published}</td>
-                      <td className="px-4 py-2.5 hidden xl:table-cell text-xs text-muted-foreground max-w-[180px] truncate">
-                        {run.error_summary ?? "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -12,11 +12,14 @@ export function ClientLayoutWrapper({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   useEffect(() => {
-    setIsMounted(true);
-    // Auto-close sidebar on mobile after navigation
-    if (window.innerWidth < 768) {
-      setIsOpen(false);
-    }
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setIsMounted(true);
+      // Auto-close sidebar on mobile after navigation
+      if (window.innerWidth < 768) setIsOpen(false);
+    });
+    return () => { active = false; };
   }, [pathname]);
 
   // Avoid hydration mismatch by not rendering the sliding state until mounted
@@ -49,7 +52,7 @@ export function ClientLayoutWrapper({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:relative z-50 h-full w-64 border-r border-border bg-card flex-shrink-0 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed md:relative z-50 h-full w-64 border-r border-border bg-card flex-shrink-0 transform transition-transform motion-reduce:transition-none duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:hidden md:-ml-64 md:translate-x-0"
         } ${!isOpen && "hidden md:block md:-ml-64"}`}
         style={{
@@ -60,7 +63,7 @@ export function ClientLayoutWrapper({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col relative w-full transition-all duration-300 ease-in-out">
+      <div className="flex min-w-0 flex-1 flex-col relative w-full transition-all motion-reduce:transition-none duration-300 ease-in-out">
         <header className="flex flex-shrink-0 h-14 items-center gap-4 border-b border-border bg-card px-4 md:px-6 sticky top-0 z-30">
           <button
             onClick={() => setIsOpen(!isOpen)}

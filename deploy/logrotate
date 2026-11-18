@@ -1,0 +1,10 @@
+# Install as /etc/logrotate.d/lucknow-live-events.
+/var/log/lucknow-live-events/engine.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 lucknow lucknow
+}

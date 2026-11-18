@@ -1,0 +1,17 @@
+{
+  "event": {
+    "api_id": "evt-0zi7zx9aezlPUDF",
+    "name": "Data Engineers Meetup",
+    "start_at": "2026-11-28T05:00:00.000Z",
+    "end_at": "2026-11-28T08:00:00.000Z",
+    "location_type": "offline",
+    "url": "ne5hyjwj",
+    "coordinate": {"longitude": 80.94616599999999, "latitude": 26.8466937},
+    "geo_address_info": {"address": "Lucknow", "full_address": "Lucknow, Uttar Pradesh, India"},
+    "cover_url": "https://images.lumacdn.com/gallery-images/0z/3993b577-b642-4ccb-88c4-da4f7ce5f696.png"
+  },
+  "hosts": [{"api_id": "usr-2kO4FHeKWEoFsXz", "name": "Harsh Gupta"}],
+  "categories": [{"name": "Tech"}],
+  "description_mirror": {"type": "doc", "content": [{"type": "paragraph", "content": [{"text": "Just a meetup of all the data engineers who are in Lucknow currently.", "type": "text"}]}]},
+  "ticket_info": {"is_free": true}
+}

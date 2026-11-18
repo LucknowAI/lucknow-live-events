@@ -245,7 +245,11 @@ INITIAL_SOURCES = [
         "trust_score": 0.70,
         "enabled": True,
         "crawl_interval_hours": 6,
-        "config_json": {"location": "Lucknow", "max_items": 20},
+        "config_json": {
+            "location": "Lucknow",
+            "max_items": 20,
+            "opportunity_types": ["hackathons", "competitions", "workshops"],
+        },
     },
     # ── FOSS United ──────────────────────────────────────────────────────────
     {
@@ -376,6 +380,50 @@ INITIAL_SOURCES = [
 ]
 
 
+INITIAL_SOURCES.append(
+    {
+        "name": "Luma Lucknow",
+        "platform": "luma",
+        "base_url": "https://luma.com/discover",
+        "enabled": True,
+        "config_json": {
+            "latitude": 26.85,
+            "longitude": 80.95,
+            "categories": ["Tech"],
+            "allowed_hosts": [],  # Stable usr-... API IDs, not display names.
+        },
+    }
+)
+
+
+# GDG chapters read by the engine's Bevy adapter (engine/sources/bevy.py).
+# The chapter id is in each chapter page's source (`chapter_id = '1227'`).
+# Names end in "(Bevy)" because seeding skips names that already exist, and the
+# old `gdg` rows above use the plain chapter names.
+BEVY_CHAPTERS = [
+    ("GDG Lucknow", 1227, "gdg-lucknow"),
+    ("GDG on Campus SRMCEM", 1928, "gdg-on-campus-shri-ramswaroop-memorial-college-of-engineering-and-management-lucknow-india"),
+    ("GDG on Campus BBDITM", 1834, "gdg-on-campus-babu-banarasi-das-institute-of-technology-and-management-lucknow-india"),
+    ("GDG on Campus BBDNIIT", 2207, "gdg-on-campus-babu-banarasi-das-northern-india-institute-of-technology-lucknow-india"),
+    ("GDG on Campus BNCET", 2001, "gdg-on-campus-bn-college-of-engineering-technology-lucknow-india"),
+    ("GDG on Campus Bansal IET", 2057, "gdg-on-campus-bansal-institute-of-engineering-technology-lucknow-india"),
+    ("GDG on Campus Integral University", 1952, "gdg-on-campus-integral-university-lucknow-india"),
+    ("GDG on Campus IIIT Lucknow", 1717, "gdg-on-campus-indian-institute-of-information-technology-lucknow-india"),
+]
+
+INITIAL_SOURCES += [
+    {
+        "name": f"{name} (Bevy)",
+        "platform": "bevy",
+        "base_url": f"https://gdg.community.dev/{slug}/",
+        "enabled": True,
+        # Lucknow chapters, so their online events are allowed too.
+        "config_json": {"chapter_id": chapter_id, "lucknow_community": True},
+    }
+    for name, chapter_id, slug in BEVY_CHAPTERS
+]
+
+
 async def seed() -> None:
     async with SessionLocal() as db:
         for src_data in INITIAL_SOURCES:
@@ -386,6 +434,15 @@ async def seed() -> None:
             ).scalar_one_or_none()
 
             if existing:
+                if (
+                    existing.platform == src_data["platform"] == "unstop"
+                    and "opportunity_types" not in existing.config_json
+                ):
+                    existing.config_json = {
+                        **existing.config_json,
+                        "opportunity_types": src_data["config_json"]["opportunity_types"],
+                    }
+                    log.info("seed.config_upgraded", name=src_data["name"])
                 log.info("seed.already_exists", name=src_data["name"])
                 continue
 

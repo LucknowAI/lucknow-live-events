@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { adminService, type AdminEvent, type EventUpdate } from "@/lib/admin-api";
-import { Loader2, Search, Trash2, RefreshCw, Star, ExternalLink, Pencil, X, Clock } from "lucide-react";
+import { Loader2, Search, Trash2, Star, ExternalLink, Pencil, X, Clock } from "lucide-react";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -170,7 +170,7 @@ export function EventsTab() {
   const [editing, setEditing] = useState<AdminEvent | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
 
-  async function load(pg = 1, query = q) {
+  const load = useCallback(async (pg = 1, query = "") => {
     setLoading(true);
     try {
       const res = await adminService.listEvents(pg, 30, query || undefined);
@@ -179,9 +179,13 @@ export function EventsTab() {
       setPage(pg);
     } catch { /* ignore */ }
     setLoading(false);
-  }
+  }, []);
 
-  useEffect(() => { load(1); }, []);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => { if (active) void load(1); });
+    return () => { active = false; };
+  }, [load]);
 
   async function handleDelete(id: string) {
     if (!confirm("Permanently delete this event?")) return;
@@ -189,13 +193,6 @@ export function EventsTab() {
     await adminService.deleteEvent(id).catch(() => null);
     setEvents((ev) => ev.filter((e) => e.id !== id));
     setActionId(null);
-  }
-
-  async function handleRescrape(id: string) {
-    setActionId(id);
-    await adminService.rescrapeEvent(id).catch(() => null);
-    setActionId(null);
-    alert("Re-scrape queued!");
   }
 
   async function handleFeature(ev: AdminEvent) {
@@ -228,7 +225,7 @@ export function EventsTab() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="rounded-xl border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
@@ -258,7 +255,7 @@ export function EventsTab() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 justify-end opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                       <a href={ev.canonical_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-muted" title="View source">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
@@ -267,9 +264,6 @@ export function EventsTab() {
                       </button>
                       <button onClick={() => handleFeature(ev)} disabled={actionId === ev.id} className="p-1.5 rounded-lg hover:bg-muted" title={ev.is_featured ? "Unfeature" : "Feature"}>
                         <Star className={`w-3.5 h-3.5 ${ev.is_featured ? "fill-yellow-400 text-yellow-400" : ""}`} />
-                      </button>
-                      <button onClick={() => handleRescrape(ev.id)} disabled={actionId === ev.id} className="p-1.5 rounded-lg hover:bg-muted" title="Re-scrape">
-                        <RefreshCw className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => handleDelete(ev.id)} disabled={actionId === ev.id} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive" title="Delete">
                         <Trash2 className="w-3.5 h-3.5" />
@@ -285,9 +279,9 @@ export function EventsTab() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4">
-        <button disabled={page <= 1} onClick={() => load(page - 1)} className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold disabled:opacity-40">← Prev</button>
+        <button disabled={page <= 1} onClick={() => load(page - 1, q)} className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold disabled:opacity-40">← Prev</button>
         <span className="text-xs text-muted-foreground">Page {page} · {total} total</span>
-        <button disabled={events.length < 30} onClick={() => load(page + 1)} className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold disabled:opacity-40">Next →</button>
+        <button disabled={events.length < 30} onClick={() => load(page + 1, q)} className="px-3 py-1.5 rounded-lg border border-border text-xs font-bold disabled:opacity-40">Next →</button>
       </div>
 
       {editing && (

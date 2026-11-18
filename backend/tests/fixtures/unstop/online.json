@@ -1,0 +1,27 @@
+{
+  "id": 1563941,
+  "title": "Pixel Verse – A National Level UI/UX Hackathon",
+  "public_url": "hackathons/pixel-verse-a-national-level-uiux-hackathon-integral-university-iu-lucknow-1563941",
+  "region": "online",
+  "start_date": "2025-09-25T15:15:38+05:30",
+  "end_date": "2025-11-01T23:59:00+05:30",
+  "details": "<p data-start=\"232\" data-end=\"465\">Pixel Verse is a UI/UX hackathon where creativity meets technology.</p>",
+  "address_with_country_logo": {
+    "address": "",
+    "city": "",
+    "state": "",
+    "lat": null,
+    "lng": null
+  },
+  "locations": [],
+  "organisation": {
+    "name": "Integral University (IU), Lucknow"
+  },
+  "paid": 0,
+  "regn_url": null,
+  "logoUrl2": "https://d8it4huxumps7.cloudfront.net/uploads/images/150x150/uploadedManual-68d50a3f3199e_pixel_verse_logo.jpg",
+  "regnRequirements": {
+    "start_regn_dt": "2025-09-25T15:15:38+05:30",
+    "end_regn_dt": "2025-10-26T00:00:00+05:30"
+  }
+}

@@ -1,0 +1,7 @@
+# Install as /etc/cron.d/lucknow-live-events (owned by root, mode 0644).
+#
+# 00:30 UTC is 06:00 Asia/Kolkata. Keep the server clock on UTC: Debian and
+# Ubuntu cron do not reliably honour CRON_TZ.
+SHELL=/bin/sh
+PATH=/usr/local/bin:/usr/bin:/bin
+30 0 * * * lucknow /opt/lucknow-live-events/deploy/run-engine.sh

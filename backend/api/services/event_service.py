@@ -6,6 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models.event import Event
+from api.schemas.event import EventStatus
 
 
 def _utc_now() -> datetime:
@@ -31,12 +32,20 @@ async def list_events(
     community: str | None = None,
     is_free: bool | None = None,
     is_student_friendly: bool | None = None,
+    status: EventStatus | None = None,
+    past_days: int | None = None,
     page: int = 1,
     limit: int = 20,
 ) -> tuple[list[Event], int]:
     # MVP implementation: basic filters + ordering. Full-text search wiring comes later.
     now = _utc_now()
     stmt = select(Event).where((Event.published_at.is_not(None)) & (Event.expires_at.is_(None) | (Event.expires_at > now)))
+    stmt = stmt.where(Event.status == status if status else Event.status.in_(["upcoming", "ongoing"]))
+    if status == "past" and past_days is not None:
+        stmt = stmt.where(
+            func.coalesce(Event.end_at, Event.start_at + timedelta(days=1))
+            >= func.now() - timedelta(days=past_days)
+        )
 
     if start_date is not None:
         stmt = stmt.where(Event.start_at >= datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc))
@@ -71,8 +80,12 @@ async def list_events(
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = (await db.execute(count_stmt)).scalar_one()
 
-    # Sort: real-dated events first (by date ASC), then TBA events (by created_at DESC)
-    stmt = stmt.order_by(Event.date_tba.asc(), Event.start_at.asc()).offset((page - 1) * limit).limit(limit)
+    # Real-dated events first: latest end for past events, earliest start otherwise.
+    order = (
+        func.coalesce(Event.end_at, Event.start_at + timedelta(days=1)).desc()
+        if status == "past" else Event.start_at.asc()
+    )
+    stmt = stmt.order_by(Event.date_tba.asc(), order, Event.id).offset((page - 1) * limit).limit(limit)
     items = (await db.execute(stmt)).scalars().all()
     return items, int(total)
 
@@ -136,16 +149,16 @@ async def list_past_events(db: AsyncSession, days: int = 30) -> list[Event]:
     Shown in the "Completed Events" section on the frontend.
     Ordered most-recently-completed first. Excludes date_tba events.
     """
-    now = _utc_now()
-    cutoff = now - timedelta(days=days)
+    cutoff = func.now() - timedelta(days=days)
+    ended_at = func.coalesce(Event.end_at, Event.start_at + timedelta(days=1))
     stmt = (
         select(Event)
         .where(
             (Event.published_at.is_not(None))
             & (Event.date_tba == False)  # noqa: E712
-            & (Event.start_at < now)
-            & (Event.start_at >= cutoff)
+            & (Event.status == "past")
+            & (ended_at >= cutoff)
         )
-        .order_by(Event.start_at.desc())
+        .order_by(ended_at.desc())
     )
     return (await db.execute(stmt)).scalars().all()

@@ -16,7 +16,11 @@ export function ModerationTab() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => { if (active) void load(); });
+    return () => { active = false; };
+  }, []);
 
   async function handleApprove(id: string) {
     setActionId(id);

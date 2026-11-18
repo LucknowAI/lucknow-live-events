@@ -1,0 +1,30 @@
+{
+  "id": 99103,
+  "title": "[Cloud] End-to-End AI App Dev: Gemini Pro + RAG + Google Cloud (Live Demo)",
+  "description": "<p>In this session, we’ll start by exploring the fundamentals of Generative AI, how these models work, where they shine, and why they’re transforming the way we build applications.</p><p>We’ll then dive into Retrieval-Augmented Generation (RAG), a powerful approach for building intelligent Q&amp;A systems using private or enterprise data.</p><p>The session includes a live demo where we’ll show you how to build and deploy a RAG-based AI application on Google Cloud using the AI Application service, which provides built-in capabilities for indexing and querying custom data sources.</p><p>By the end of this session, you’ll learn how to create your own enterprise-grade AI search app using Gemini Pro, RAG, and Google Cloud all without managing complex infrastructure.</p><p>Perfect for developers, cloud enthusiasts, and anyone looking to bring powerful AI features into their apps!</p>",
+  "start_date": "2025-08-10T11:00:00+05:30",
+  "end_date": "2025-08-10T12:00:00+05:30",
+  "audience_type": "VIRTUAL",
+  "is_virtual_event": false,
+  "is_test": false,
+  "url": "https://gdg.community.dev/events/details/google-gdg-lucknow-presents-cloud-end-to-end-ai-app-dev-gemini-pro-rag-google-cloud-live-demo/",
+  "banner": {
+    "url": "https://res.cloudinary.com/startup-grind/image/upload/c_fill,dpr_2,f_auto,g_center,q_auto:good/v1/gcs/platform-data-goog/event_banners/blob_c1sbUSb",
+    "path": "event_banners/blob_c1sbUSb",
+    "thumbnail_width": 1280,
+    "thumbnail_height": 720,
+    "thumbnail_format": "auto",
+    "thumbnail_url": "https://res.cloudinary.com/startup-grind/image/upload/c_fit,dpr_2,f_auto,g_center,h_720,q_auto:good,w_1280/v1/gcs/platform-data-goog/event_banners/blob_c1sbUSb"
+  },
+  "chapter": {
+    "id": 1227,
+    "title": "GDG Lucknow"
+  },
+  "tickets": [
+    {
+      "id": 50223,
+      "title": "General Admission",
+      "price": 0.0
+    }
+  ]
+}

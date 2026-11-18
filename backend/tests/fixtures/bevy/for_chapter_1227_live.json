@@ -1,0 +1,23 @@
+{
+  "links": {
+    "next": null,
+    "previous": null
+  },
+  "pagination": {
+    "previous_page": null,
+    "current_page": 1,
+    "next_page": null,
+    "page_size": 500
+  },
+  "count": 1,
+  "results": [
+    {
+      "id": 133425,
+      "title": "DevFest Lucknow 2026: Where Builders Meet",
+      "start_date": "2026-11-14T03:30:00Z",
+      "end_date": "2026-11-14T11:30:00Z",
+      "audience_type": "IN_PERSON",
+      "static_url": "https://gdg.community.dev/e/m8q4xv/"
+    }
+  ]
+}

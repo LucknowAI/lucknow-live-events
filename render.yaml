@@ -8,8 +8,6 @@ services:
     healthCheckPath: /health
     envVars:
       # ── Non-secret config (safe to commit) ─────────────────────────────────
-      - key: GEMINI_MODEL
-        value: gemini-3-flash-preview
       - key: ADMIN_EMAIL
         value: admin@example.com
       - key: CORS_ORIGINS
@@ -30,12 +28,6 @@ services:
       # ── Secrets — paste these in the Render dashboard after import ──────────
       # DATABASE_URL  →  your Neon postgresql+asyncpg:// URL
       - key: DATABASE_URL
-        sync: false
-      # REDIS_URL  →  your Upstash rediss:// URL
-      - key: REDIS_URL
-        sync: false
-      # GEMINI_API_KEY  →  your Google AI Studio key
-      - key: GEMINI_API_KEY
         sync: false
       # JWT_SECRET  →  long random string (keep the same one from .env.production)
       - key: JWT_SECRET

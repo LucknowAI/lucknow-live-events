@@ -10,17 +10,18 @@ class Settings(BaseSettings):
     # Only needed for running `alembic upgrade head` locally / in CI.
     # The live API server never uses this — so it is optional for Render/Cloud Run.
     ALEMBIC_DATABASE_URL: str | None = None
-    REDIS_URL: str = "redis://redis:6379/0"
+    # Engine-only dead-man switch. Empty disables the ping.
+    HEALTHCHECK_URL: str = ""
 
-    GEMINI_API_KEY: str | None = None
-    GEMINI_MODEL: str = "gemini-3.0-flash"
-    AI_MODE: str = "gemini"  # gemini | mock
-    AI_FALLBACK_TO_MOCK: bool = True
+    LLM_BASE_URL: str = ""
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = ""
 
     STORAGE_TYPE: str = "local"
     LOCAL_STORAGE_PATH: str = "/app/data/snapshots"
 
-    JWT_SECRET: str = "change_me"
+    # No fallback signing key: public endpoints work, admin auth stays disabled.
+    JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
 
@@ -33,4 +34,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

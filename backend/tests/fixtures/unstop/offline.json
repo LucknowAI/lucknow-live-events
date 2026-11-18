@@ -1,0 +1,27 @@
+{
+  "id": 1654684,
+  "title": "HackEclipse CU-Lucknow",
+  "public_url": "hackathons/hackeclipse-cu-lucknow-chandigarh-university-uttar-pradesh-campus-1654684",
+  "region": "offline",
+  "start_date": "2026-03-06T12:00:00+05:30",
+  "end_date": "2026-04-30T15:00:00+05:30",
+  "details": "<p data-path-to-node=\"3\"><strong data-path-to-node=\"3\" data-index-in-node=\"0\">HackEclipse 2026: 72 Hours of Code &amp; Innovation</strong></p>",
+  "address_with_country_logo": {
+    "address": "Chandigarh University Uttar Pradesh",
+    "city": "Unnao",
+    "state": "Uttar Pradesh",
+    "lat": null,
+    "lng": null
+  },
+  "locations": [],
+  "organisation": {
+    "name": "Chandigarh University, Uttar Pradesh campus"
+  },
+  "paid": 0,
+  "regn_url": null,
+  "logoUrl2": "https://d8it4huxumps7.cloudfront.net/uploads/images/150x150/uploadedManual-69c68a4ff3ada_cu_new_logo.png",
+  "regnRequirements": {
+    "start_regn_dt": "2026-03-06T12:00:00+05:30",
+    "end_regn_dt": "2026-04-05T12:00:00+05:30"
+  }
+}

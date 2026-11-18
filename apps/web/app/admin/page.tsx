@@ -59,26 +59,6 @@ export default function AdminDashboardPage() {
     }
   }
 
-  async function crawlOne(id: string) {
-    setMsg("");
-    try {
-      const r = await adminService.triggerCrawl(id);
-      setMsg(`Crawl queued: ${r.task_id}`);
-    } catch {
-      setErr("Failed to queue crawl.");
-    }
-  }
-
-  async function crawlAll() {
-    setMsg("");
-    try {
-      const r = await adminService.triggerAll();
-      setMsg(`Crawl-all queued: ${r.task_id}`);
-    } catch {
-      setErr("Failed to queue crawl-all.");
-    }
-  }
-
   async function approve(id: string) {
     setMsg("");
     try {
@@ -106,7 +86,7 @@ export default function AdminDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Admin</h1>
-          <p className="text-sm text-muted-foreground">Sources, crawls, and moderation queue</p>
+          <p className="text-sm text-muted-foreground">Sources and moderation queue</p>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => void load()} className="rounded-md border border-border px-3 py-1.5 text-sm">
@@ -136,13 +116,6 @@ export default function AdminDashboardPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-xl font-semibold">Sources</h2>
-          <button
-            type="button"
-            onClick={() => void crawlAll()}
-            className="rounded-md bg-secondary px-3 py-1.5 text-sm font-medium border border-border"
-          >
-            Crawl all sources
-          </button>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -152,7 +125,6 @@ export default function AdminDashboardPage() {
                 <th className="p-3">Platform</th>
                 <th className="p-3">Enabled</th>
                 <th className="p-3">Last crawl</th>
-                <th className="p-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -171,15 +143,6 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className="p-3 text-xs text-muted-foreground">
                     {s.last_crawled_at ? new Date(s.last_crawled_at).toLocaleString() : "—"}
-                  </td>
-                  <td className="p-3">
-                    <button
-                      type="button"
-                      onClick={() => void crawlOne(s.id)}
-                      className="text-primary text-xs font-semibold hover:underline"
-                    >
-                      Crawl
-                    </button>
                   </td>
                 </tr>
               ))}

@@ -6,7 +6,6 @@ from api.core.config import settings
 from api.core.security import create_access_token, verify_password
 from api.schemas.admin import LoginRequest, TokenResponse
 
-
 router = APIRouter()
 
 
@@ -15,10 +14,10 @@ async def login(payload: LoginRequest) -> TokenResponse:
     if payload.email != settings.ADMIN_EMAIL:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    if not settings.ADMIN_PASSWORD_HASH:
+    if not settings.ADMIN_PASSWORD_HASH or not settings.JWT_SECRET.strip():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Admin password not configured. Set ADMIN_PASSWORD_HASH in env.",
+            detail="Admin authentication is not configured.",
         )
 
     if not verify_password(payload.password, settings.ADMIN_PASSWORD_HASH):

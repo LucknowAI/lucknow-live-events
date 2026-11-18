@@ -1,6 +1,15 @@
+import type { EventStatus } from "@/lib/api";
+
+export function eventStatusFromSearchParams(searchParams: Pick<URLSearchParams, "get">): EventStatus {
+  const status = searchParams.get("status");
+  return status === "ongoing" || status === "past" ? status : "upcoming";
+}
+
 /** Maps URL search params to backend GET /events query object. */
 export function searchParamsToEventQuery(searchParams: URLSearchParams): Record<string, unknown> {
-  const o: Record<string, unknown> = {};
+  const status = eventStatusFromSearchParams(searchParams);
+  const o: Record<string, unknown> = { status };
+  if (status === "past") o.past_days = 30;
   const q = searchParams.get("q");
   if (q) o.q = q;
   const topic = searchParams.get("topic");

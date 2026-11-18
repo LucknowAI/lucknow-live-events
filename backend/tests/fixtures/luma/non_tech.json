@@ -1,0 +1,17 @@
+{
+  "event": {
+    "api_id": "evt-9vZagGnMk29gCBe",
+    "name": "Week 87| Spark run & Afters",
+    "start_at": "2026-11-08T01:00:00.000Z",
+    "end_at": "2026-11-08T02:00:00.000Z",
+    "location_type": "offline",
+    "url": "x98vtg5q",
+    "coordinate": {"longitude": 80.944771, "latitude": 26.9050469},
+    "geo_address_info": {"address": "Nothing Before Coffee Cafe", "full_address": "Nothing Before Coffee Cafe, Near, Ram Ram Bank Chauraha, Sector B, Jankipuram, Lucknow, Uttar Pradesh 226024, India"},
+    "cover_url": "https://images.lumacdn.com/uploads/ju/4d169c53-b421-43c5-9bcb-311b1273863d.jpg"
+  },
+  "hosts": [{"api_id": "usr-z9I3a20Fb1c6VAq", "name": "Run Spark"}],
+  "categories": [{"name": "Fitness"}, {"name": "Running"}],
+  "description_mirror": {"type": "doc", "content": [{"type": "paragraph", "content": [{"text": "Week 87 is diwali for runners!", "type": "text"}]}]},
+  "ticket_info": {"is_free": true}
+}

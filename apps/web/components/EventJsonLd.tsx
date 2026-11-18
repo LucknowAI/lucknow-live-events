@@ -31,10 +31,15 @@ export function EventJsonLd({ event, siteUrl }: { event: Event; siteUrl: string 
     url: `${siteUrl.replace(/\/$/, "")}/events/${event.slug}`,
   };
 
+  // Event text comes from outside platforms. JSON.stringify leaves `<` as is, so a
+  // title containing `</script>` would end this tag and run whatever follows.
+  // `<` is the same character to a JSON parser but never closes a tag.
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+      }}
     />
   );
 }

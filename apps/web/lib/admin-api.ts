@@ -94,42 +94,12 @@ export interface EventUpdate {
   is_cancelled?: boolean;
 }
 
-export interface ModerationItem {
-  id: string;
-  entity_type: string | null;
-  entity_id: string | null;
-  reason: string | null;
-  severity: string | null;
-  status: string;
-  ai_verdict: Record<string, unknown> | null;
-  notes: string | null;
-  created_at: string;
-  // Enriched preview fields joined from the raw_event record
-  preview_title: string | null;
-  preview_url: string | null;
-  preview_community: string | null;
-  preview_confidence: number | null;
-}
-
 export interface StatsOut {
   events_total: number;
   events_this_week: number;
   pending_moderation: number;
   sources_active: number;
   sources_blacklisted: number;
-}
-
-export interface CrawlRun {
-  id: string;
-  source_id: string;
-  started_at: string;
-  finished_at: string | null;
-  status: string | null;
-  events_found: number;
-  events_new: number;
-  events_published: number;
-  error_summary: string | null;
-  created_at: string;
 }
 
 export interface CommunitySubmission {
@@ -143,32 +113,6 @@ export interface CommunitySubmission {
   status: string;
   created_at: string;
 }
-
-export interface QueueItem {
-  id: string;
-  pipeline_status: string;
-  extraction_method: string | null;
-  extraction_confidence: number;
-  title: string;
-  url: string | null;
-  community: string | null;
-  reason: string | null;
-  seen_at: string;
-}
-
-export interface LastPublishedEvent {
-  id: string;
-  title: string;
-  start_at: string;
-  mode: string | null;
-  community_name: string | null;
-  canonical_url: string;
-  poster_url: string | null;
-  published_at: string;
-  date_tba: boolean;
-}
-
-
 
 export const adminService = {
   // Auth
@@ -203,18 +147,6 @@ export const adminService = {
   deleteSource: async (id: string): Promise<void> => {
     await adminApi.delete(`/admin/sources/${id}`);
   },
-  triggerCrawl: async (id: string): Promise<{ task_id: string }> => {
-    const { data } = await adminApi.post<{ task_id: string }>(`/admin/sources/crawl/run/${id}`);
-    return data;
-  },
-  triggerAll: async (): Promise<{ task_id: string }> => {
-    const { data } = await adminApi.post<{ task_id: string }>("/admin/sources/crawl/run-all");
-    return data;
-  },
-  crawlRuns: async (): Promise<CrawlRun[]> => {
-    const { data } = await adminApi.get<CrawlRun[]>("/admin/sources/crawl/runs");
-    return data;
-  },
 
   // Events
   listEvents: async (page = 1, limit = 50, q?: string): Promise<AdminEventListResponse> => {
@@ -225,10 +157,6 @@ export const adminService = {
   },
   updateEvent: async (id: string, payload: EventUpdate): Promise<AdminEvent> => {
     const { data } = await adminApi.put<AdminEvent>(`/admin/events/${id}`, payload);
-    return data;
-  },
-  rescrapeEvent: async (id: string): Promise<{ task_id: string }> => {
-    const { data } = await adminApi.post<{ task_id: string }>(`/admin/events/${id}/rescrape`);
     return data;
   },
   featureEvent: async (id: string, featured: boolean): Promise<AdminEvent> => {
@@ -244,14 +172,6 @@ export const adminService = {
   deleteEvent: async (id: string): Promise<void> => {
     await adminApi.delete(`/admin/events/${id}`);
   },
-  fixBadDates: async (): Promise<{ task_id: string; events_queued: number }> => {
-    const { data } = await adminApi.post<{ task_id: string; events_queued: number }>("/admin/events/fix-bad-dates");
-    return data;
-  },
-  expireNow: async (): Promise<{ task_id: string }> => {
-    const { data } = await adminApi.post<{ task_id: string }>("/admin/events/expire-now");
-    return data;
-  },
 
   // Moderation — community submissions
   listCommunitySubmissions: async (status = "pending"): Promise<CommunitySubmission[]> => {
@@ -264,35 +184,6 @@ export const adminService = {
   },
   rejectModeration: async (id: string): Promise<Record<string, unknown>> => {
     const { data } = await adminApi.post<Record<string, unknown>>(`/admin/moderation/communities/${id}/reject`);
-    return data;
-  },
-
-  // Event pipeline queue
-  listEventQueue: async (): Promise<QueueItem[]> => {
-    const { data } = await adminApi.get<QueueItem[]>("/admin/events/queue");
-    return data;
-  },
-  getLastPublished: async (): Promise<LastPublishedEvent | null> => {
-    const { data } = await adminApi.get<LastPublishedEvent | null>("/admin/events/queue/last-published");
-    return data;
-  },
-  removeFromQueue: async (rawEventId: string): Promise<void> => {
-    await adminApi.delete(`/admin/events/queue/${rawEventId}`);
-  },
-
-  // Discovery
-  runDiscovery: async (): Promise<{ task_id: string }> => {
-    const { data } = await adminApi.post<{ task_id: string }>("/admin/discovery/run");
-    return data;
-  },
-  runCustomDiscovery: async (queries: string[]): Promise<{ task_id: string }> => {
-    const { data } = await adminApi.post<{ task_id: string }>("/admin/discovery/run-custom", { custom_queries: queries });
-    return data;
-  },
-  submitUrl: async (event_url: string): Promise<{ submission_id: string }> => {
-    const { data } = await adminApi.post<{ submission_id: string }>(`/admin/discovery/submit-url`, null, {
-      params: { event_url },
-    });
     return data;
   },
 };

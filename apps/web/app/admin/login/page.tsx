@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
   return (
     <div className="max-w-md mx-auto py-20 px-6">
       <h1 className="text-2xl font-bold mb-2">Admin login</h1>
-      <p className="text-sm text-muted-foreground mb-8">JWT access to crawl sources and moderation.</p>
+      <p className="text-sm text-muted-foreground mb-8">Sign in to manage sources and review community submissions.</p>
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="text-xs font-semibold text-muted-foreground uppercase">Email</label>
