@@ -212,3 +212,16 @@ async def test_run_without_a_matching_source_pings_failure(db_session, monkeypat
 
     assert await runner.run(platform="nope", session=db_session, ping=True) == 1
     assert pings == [True]
+
+
+async def test_full_run_without_enabled_sources_pings_failure(db_session, monkeypatch):
+    # An unseeded database must not look like a healthy daily run.
+    pings = []
+
+    async def fake_ping(failed):
+        pings.append(failed)
+
+    monkeypatch.setattr(runner, "_ping", fake_ping)
+
+    assert await runner.run(session=db_session, ping=True) == 1
+    assert pings == [True]

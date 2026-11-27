@@ -66,7 +66,7 @@ async def _run(session: AsyncSession, platform: str | None, dry_run: bool, ping:
                     .order_by(Source.name)
                 )
             )
-        if platform and not sources:
+        if not sources:
             log.info("engine.source", platform=platform, status="failed", error="no enabled source")
             # Fall through: the dead-man ping must still report the failure.
             failed = True
