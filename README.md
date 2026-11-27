@@ -43,7 +43,7 @@ PostgreSQL: enabled sources with supported platform keys
 
 Every engine run fetches each enabled source whose `platform` has a registered adapter. The adapter reads public platform data and produces a common `NormalizedEvent`. Ordered rules validate dates, Lucknow relevance and online-event eligibility. A stable content hash distinguishes new, changed and unchanged events; only changed data is written. Errors on one source do not prevent other sources from running. The runner exits with a nonzero status if any source fails.
 
-Production schedules the engine once daily using [`deploy/crontab`](deploy/crontab) and [`deploy/run-engine.sh`](deploy/run-engine.sh). Optionally, `HEALTHCHECK_URL` reports success or failure to healthchecks.io.
+Production schedules the engine once daily using [`deploy/crontab`](deploy/crontab) and [`deploy/run-engine.sh`](deploy/run-engine.sh). `run-engine.sh` requires `HEALTHCHECK_URL`, which reports success or failure to healthchecks.io; without it, every run except `--dry-run` stops with an error.
 
 ### Tech stack
 
@@ -190,7 +190,7 @@ Run Compose commands from the repository root. `--env-file` supplies Compose int
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Container database settings; the password has no default |
 | `DATABASE_URL` | Async PostgreSQL URL with matching credentials (`postgresql+asyncpg://…`) |
 | `ALEMBIC_DATABASE_URL` | Sync URL for offline migrations (`postgresql+psycopg2://…`); online migrations use `DATABASE_URL` |
-| `HEALTHCHECK_URL` | healthchecks.io ping URL used by the daily engine run; blank disables the ping |
+| `HEALTHCHECK_URL` | healthchecks.io ping URL used by the daily engine run; required by `deploy/run-engine.sh` except with `--dry-run`, blank disables the ping for a direct `python -m engine.run` |
 | `JWT_SECRET` | Private backend signing key; use a long random value supplied securely, never `NEXT_PUBLIC_*` |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH` | Backend login identity and bcrypt password hash |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | Optional future text-completion helper; leave blank for normal operation. The base URL includes the provider's API prefix (such as `/v1`). |
