@@ -19,6 +19,18 @@ set -a
 . "$ENV_FILE"
 set +a
 
+# The ping is the only alert. Without it a failing daily run is silent.
+# A dry run sends no ping, so it may run without one.
+case " $* " in
+*" --dry-run "*) ;;
+*)
+    if [ -z "${HEALTHCHECK_URL:-}" ]; then
+        echo "run-engine: HEALTHCHECK_URL is empty in $ENV_FILE; refusing to run without the dead-man ping" >&2
+        exit 1
+    fi
+    ;;
+esac
+
 # Unbuffered output: a killed run still leaves its log lines behind.
 PYTHONUNBUFFERED=1
 export PYTHONUNBUFFERED
