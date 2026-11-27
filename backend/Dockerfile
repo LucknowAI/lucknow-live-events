@@ -26,5 +26,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 EXPOSE 8000
 
+# Migrate first; a failed migration stops the container before the API starts.
 # Cloud Run injects $PORT at runtime; fall back to 8000 for local use.
-CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
