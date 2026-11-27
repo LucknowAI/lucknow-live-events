@@ -170,7 +170,7 @@ async def test_seed_is_idempotent_and_preserves_custom_settings(
     rows = (await db_session.scalars(select(Source))).all()
     assert len(rows) == 1
     expected = dict(spec["config_json"] if old_config is None else old_config)
-    expected.setdefault("opportunity_types", TYPES)
+    expected.setdefault("opportunity_types", spec["config_json"]["opportunity_types"])
     assert rows[0].config_json == expected
     assert rows[0].enabled is (old_config is None)
     assert rows[0].status == ("active" if old_config is None else "blacklisted")
