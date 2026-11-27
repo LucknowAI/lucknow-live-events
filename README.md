@@ -314,9 +314,8 @@ Use a dedicated `lucknow` user and keep the checkout at
    '
    ```
 
-   The runner only reads rows whose platform has an adapter (`bevy`, `luma`,
-   `unstop`); the rest of the seed rows stay dormant until their adapter
-   lands. Keep the ones you want enabled.
+   The seed holds only platforms with an adapter (`bevy`, `luma`, `unstop`).
+   Disable any row you do not want to run.
 
 5. Create the log directory, then test the engine without saving events:
 
@@ -390,7 +389,7 @@ Use a dedicated `lucknow` user and keep the checkout at
 | `luma` | [`backend/engine/sources/luma.py`](backend/engine/sources/luma.py) | Luma public discovery by `latitude` / `longitude`, with accepted `categories` or `allowed_hosts` in `config_json`. |
 | `unstop` | [`backend/engine/sources/unstop.py`](backend/engine/sources/unstop.py) | Unstop public opportunities for Lucknow. Set `config_json.opportunity_types` to a list drawn from `hackathons`, `competitions` and `workshops`. |
 
-Other platforms may appear in `scripts/seed_sources.py`, but they do **not** run until their adapter is implemented and registered. The platform key is significant: for example, a `gdg` source is not automatically treated as `bevy`. A daily cron run is independent of any historical `crawl_interval_hours` metadata on a source row.
+`scripts/seed_sources.py` seeds only these three platforms. A row for any other platform does **not** run until its adapter is implemented and registered. The platform key is significant: for example, a `gdg` source is not automatically treated as `bevy`. A daily cron run is independent of any historical `crawl_interval_hours` metadata on a source row.
 
 ### Add a source (DB row)
 
