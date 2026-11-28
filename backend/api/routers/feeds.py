@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Response
 from icalendar import Calendar, Event as IcsEvent
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.core.database import get_db
 from api.models.event import Event
+from api.services.event_service import public_filter
 
 
 router = APIRouter()
@@ -16,10 +16,9 @@ router = APIRouter()
 
 @router.get("/events.json")
 async def events_json(db: AsyncSession = Depends(get_db)):
-    now = datetime.now(timezone.utc)
     stmt = (
         select(Event)
-        .where((Event.published_at.is_not(None)) & (Event.expires_at.is_(None) | (Event.expires_at > now)))
+        .where(public_filter())
         .order_by(Event.start_at.asc())
     )
     events = (await db.execute(stmt)).scalars().all()
@@ -28,10 +27,9 @@ async def events_json(db: AsyncSession = Depends(get_db)):
 
 @router.get("/events.ics")
 async def events_ics(db: AsyncSession = Depends(get_db)):
-    now = datetime.now(timezone.utc)
     stmt = (
         select(Event)
-        .where((Event.published_at.is_not(None)) & (Event.expires_at.is_(None) | (Event.expires_at > now)))
+        .where(public_filter())
         .order_by(Event.start_at.asc())
     )
     events = (await db.execute(stmt)).scalars().all()
