@@ -6,8 +6,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   let eventRoutes: MetadataRoute.Sitemap = []
   try {
-    // Fetch up to 1000 latest events for the sitemap
-    const { items } = await eventService.getEvents({ limit: 1000 })
+    // The API caps limit at 200; a larger value returns 422 and no event URLs.
+    const { items } = await eventService.getEvents({ limit: 200 })
     eventRoutes = items.map((event) => ({
       url: `${baseUrl}/events/${event.slug}`,
       lastModified: new Date(event.updated_at || event.start_at),
