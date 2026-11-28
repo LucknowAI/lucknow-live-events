@@ -188,6 +188,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             <div className="w-full h-px bg-border my-12" />
 
             <div className="prose prose-invert max-w-none">
+              {event.description?.trim() && (
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight mb-6 text-foreground">About this event</h3>
+                  {/* Plain text from the engine; React escapes it, and line breaks are kept. */}
+                  <p className="whitespace-pre-line text-muted-foreground leading-relaxed">
+                    {event.description.trim()}
+                  </p>
+                </div>
+              )}
               {event.topics && event.topics.length > 0 && (
                 <div className="mt-8">
                   <h3 className="text-2xl font-bold tracking-tight mb-6 text-foreground">Topics covered</h3>
