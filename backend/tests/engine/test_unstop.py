@@ -34,6 +34,8 @@ def response(data):
 async def test_fixture_to_event_uses_event_dates(monkeypatch, mode, start):
     raw = fixture(mode)
     raw["regnRequirements"] = {"start_regn_dt": "2000-01-01T00:00:00+05:30"}
+    if mode == "offline":  # the captured event is in Unnao
+        raw["address_with_country_logo"]["city"] = "Lucknow"
     listing = {k: v for k, v in raw.items() if k != "start_date"}
 
     async def get(url):
@@ -53,7 +55,7 @@ async def test_fixture_to_event_uses_event_dates(monkeypatch, mode, start):
     assert event.is_free is True and event.source_platform == "unstop"
     assert "<" not in event.description and "&amp;" not in event.description
     assert event.address == (
-        "Chandigarh University Uttar Pradesh, Unnao, Uttar Pradesh" if mode == "offline" else None
+        "Chandigarh University Uttar Pradesh, Lucknow, Uttar Pradesh" if mode == "offline" else None
     )
 
 
@@ -114,6 +116,14 @@ async def test_invalid_types_make_no_request(monkeypatch, kinds):
 )
 def test_missing_or_ambiguous_data_is_rejected(change, reason):
     assert REGISTRY["unstop"].to_event({**fixture("online"), **change}, {}) == Rejection(reason)
+
+
+@pytest.mark.parametrize("city,kept", [("Noida", False), ("Unnao", False), ("Lucknow", True)])
+def test_offline_city_outside_lucknow_is_rejected(city, kept):
+    raw = fixture("offline")
+    raw["address_with_country_logo"] = {"address": "IIM Lucknow Noida Campus", "city": city}
+    event = REGISTRY["unstop"].to_event(raw, {})
+    assert isinstance(event, NormalizedEvent) if kept else event == Rejection("outside_lucknow")
 
 
 @pytest.mark.parametrize("primary", [None, {"address": "", "city": "", "lat": None}])
