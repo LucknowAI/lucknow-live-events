@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
                 <th className="p-3">Name</th>
                 <th className="p-3">Platform</th>
                 <th className="p-3">Enabled</th>
-                <th className="p-3">Last crawl</th>
+                <th className="p-3">Last success</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
                     </button>
                   </td>
                   <td className="p-3 text-xs text-muted-foreground">
-                    {s.last_crawled_at ? new Date(s.last_crawled_at).toLocaleString() : "—"}
+                    {s.last_success_at ? new Date(s.last_success_at).toLocaleString() : "—"}
                   </td>
                 </tr>
               ))}

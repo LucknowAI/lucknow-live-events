@@ -121,7 +121,7 @@ export function SourcesTab() {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase hidden md:table-cell">Platform</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase">Status</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase hidden lg:table-cell">Trust</th>
-                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase hidden lg:table-cell">Last Crawled</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground text-xs uppercase hidden lg:table-cell">Last Success</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -149,7 +149,7 @@ export function SourcesTab() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-                      {src.last_crawled_at ? new Date(src.last_crawled_at).toLocaleDateString("en-IN") : "Never"}
+                      {src.last_success_at ? new Date(src.last_success_at).toLocaleDateString("en-IN") : "Never"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
