@@ -13,8 +13,18 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def public_filter():
+    """What the public site may show: published, not hidden by cleanup, not cancelled."""
+    now = _utc_now()
+    return (
+        Event.published_at.is_not(None)
+        & (Event.expires_at.is_(None) | (Event.expires_at > now))
+        & Event.is_cancelled.is_(False)
+    )
+
+
 async def get_event_by_slug(db: AsyncSession, slug: str) -> Event | None:
-    stmt = select(Event).where(Event.slug == slug)
+    stmt = select(Event).where(Event.slug == slug, public_filter())
     res = await db.execute(stmt)
     return res.scalar_one_or_none()
 
@@ -38,8 +48,7 @@ async def list_events(
     limit: int = 20,
 ) -> tuple[list[Event], int]:
     # MVP implementation: basic filters + ordering. Full-text search wiring comes later.
-    now = _utc_now()
-    stmt = select(Event).where((Event.published_at.is_not(None)) & (Event.expires_at.is_(None) | (Event.expires_at > now)))
+    stmt = select(Event).where(public_filter())
     stmt = stmt.where(Event.status == status if status else Event.status.in_(["upcoming", "ongoing"]))
     if status == "past" and past_days is not None:
         stmt = stmt.where(
@@ -93,7 +102,11 @@ async def list_events(
 async def list_featured(db: AsyncSession, max_items: int = 5) -> list[Event]:
     stmt = (
         select(Event)
-        .where((Event.is_featured == True) & (Event.published_at.is_not(None)))  # noqa: E712
+        .where(
+            public_filter(),
+            Event.is_featured.is_(True),
+            Event.status.in_(["upcoming", "ongoing"]),
+        )
         .order_by(Event.start_at.asc())
         .limit(max_items)
     )
@@ -104,8 +117,7 @@ async def list_calendar_events(db: AsyncSession, start_date: date | None = None,
     """Return events for the calendar view — excludes date_tba events."""
     now = _utc_now()
     stmt = select(Event).where(
-        (Event.published_at.is_not(None))
-        & (Event.expires_at.is_(None) | (Event.expires_at > now))
+        public_filter()
         & (Event.date_tba == False)  # noqa: E712
         & (Event.start_at >= now)
     )
@@ -121,7 +133,7 @@ async def list_this_week(db: AsyncSession) -> list[Event]:
     now = _utc_now()
     stmt = (
         select(Event)
-        .where((Event.published_at.is_not(None)) & (Event.start_at >= now) & (Event.start_at <= now + timedelta(days=7)))
+        .where(public_filter() & (Event.start_at >= now) & (Event.start_at <= now + timedelta(days=7)))
         .order_by(Event.start_at.asc())
     )
     return (await db.execute(stmt)).scalars().all()
@@ -132,7 +144,7 @@ async def list_student_friendly(db: AsyncSession) -> list[Event]:
     stmt = (
         select(Event)
         .where(
-            (Event.published_at.is_not(None))
+            public_filter()
             & (Event.start_at >= now)
             & (Event.start_at <= now + timedelta(days=30))
             & (Event.is_student_friendly == True)  # noqa: E712
@@ -154,7 +166,7 @@ async def list_past_events(db: AsyncSession, days: int = 30) -> list[Event]:
     stmt = (
         select(Event)
         .where(
-            (Event.published_at.is_not(None))
+            public_filter()
             & (Event.date_tba == False)  # noqa: E712
             & (Event.status == "past")
             & (ended_at >= cutoff)
