@@ -71,6 +71,17 @@ class Unstop:
             place = (raw.get("locations") or [place])[0]
         if isinstance(place, str):
             place = {"address": place}
+        # Unstop gives no coordinates, so rules.in_lucknow falls back to "lucknow"
+        # in the address, which "IIM Lucknow Noida Campus, Noida" passes. A set
+        # city is the better signal.
+        city = place.get("city")
+        if (
+            raw["region"] != "online"
+            and isinstance(city, str)
+            and city.strip()
+            and "lucknow" not in city.casefold()
+        ):
+            return Rejection("outside_lucknow")
         parts = [place.get("address"), place.get("city") or place.get("name"), place.get("state")]
         address = ", ".join(dict.fromkeys(part for part in parts if part)) or None
         url = "https://unstop.com/" + raw["public_url"].lstrip("/")
